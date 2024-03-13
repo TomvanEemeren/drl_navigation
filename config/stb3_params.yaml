@@ -1,0 +1,5 @@
+stb3:
+  timesteps: 10000
+  algorithm: SAC
+
+  
