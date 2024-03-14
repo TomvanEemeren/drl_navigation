@@ -17,9 +17,7 @@ from drl_navigation.env_utils import Start_Environment
 
 def train(env, timesteps, log_dir, model_dir, stb3_algo="SAC"):
     if stb3_algo == "SAC":
-        model = SAC("MlpPolicy", env, verbose=1, device="cuda", tensorboard_log=log_dir)
-    elif stb3_algo == "PPO":
-        model = PPO("MlpPolicy", env, verbose=1, device="cuda", tensorboard_log=log_dir)
+        model = SAC("MultiInputPolicy", env, verbose=1, device="cuda", tensorboard_log=log_dir)
     else:
         raise ValueError("Invalid stb3_algo value. Supported values are SAC and PPO.")
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import rospy
 import numpy as np
 from gym import spaces
@@ -9,7 +11,7 @@ from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Header
 from openai_ros.task_envs.task_commons import LoadYamlFileParamsTest
 from openai_ros.openai_ros_common import ROSLauncher
-from goal import get_goal
+from generate_goal import GenerateRandomGoal
 import os
 
 class RosbotNavigationEnv(husarion_env.HusarionEnv):
@@ -36,17 +38,6 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
                                rel_path_from_package_to_file="config",
                                yaml_file_name="environment_params.yaml")
 
-        self.max_linear_speed = rospy.get_param('/husarion/max_linear_speed')
-        self.max_angular_speed = rospy.get_param('/husarion/max_angular_speed')
-
-        # Only variable needed to be set here
-        number_actions = rospy.get_param('/husarion/n_actions')
-        self.action_space = spaces.Box(
-            low=np.array([-self.max_linear_speed, -self.max_angular_speed]),    # Minimum linear and angular velocities
-            high=np.array([self.max_linear_speed, self.max_angular_speed]),     # Maximum linear and angular velocities
-            dtype=np.float32
-        )
-
         # We set the reward range, which is not compulsory but here we do it.
         self.reward_range = (-np.inf, np.inf)
 
@@ -55,11 +46,8 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
             '/husarion/init_linear_forward_speed')
         self.init_linear_turn_speed = rospy.get_param(
             '/husarion/init_linear_turn_speed')
-
-        self.linear_forward_speed = rospy.get_param(
-            '/husarion/linear_forward_speed')
-        self.linear_turn_speed = rospy.get_param('/husarion/linear_turn_speed')
-        self.angular_speed = rospy.get_param('/husarion/angular_speed')
+        self.max_linear_speed = rospy.get_param('/husarion/max_linear_speed')
+        self.max_angular_speed = rospy.get_param('/husarion/max_angular_speed')
 
         self.new_ranges = rospy.get_param('/husarion/new_ranges')
         self.max_laser_value = rospy.get_param('/husarion/max_laser_value')
@@ -70,22 +58,23 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
         self.work_space_y_max = rospy.get_param("/husarion/work_space/y_max")
         self.work_space_y_min = rospy.get_param("/husarion/work_space/y_min")
 
-        # Get Desired Point to Get
+        # Get a random goal
+        self.map_yaml_path = rospy.get_param("/husarion/map_yaml_abspath")
+        self.map_pgm_path = rospy.get_param("/husarion/map_pgm_abspath")
+        self.random_goal = GenerateRandomGoal(self.map_yaml_path, self.map_pgm_path)
+
         self.desired_position = Point()
-        self.desired_position.x, self.desired_position.y = get_goal()
+        self.desired_position.x, self.desired_position.y = \
+            self.random_goal.generate_random_goal(min_distance=0.4)
 
-        # self.desired_position.x = rospy.get_param("/husarion/desired_pose/x")
-        # self.desired_position.y = rospy.get_param("/husarion/desired_pose/y")
-
-        self.precision = rospy.get_param('/husarion/precision')
-        self.precision_epsilon = 1.0 / (10.0 * self.precision)
+        self.precision_epsilon = rospy.get_param('/husarion/precision_epsilon')
 
         self.move_base_precision = rospy.get_param(
             '/husarion/move_base_precision')
 
         # We create the arrays for the laser readings
         # We also create the arrays for the odometry readings
-        # We join them toeguether.
+        # We join them together.
 
         # Here we will add any init functions prior to starting the MyRobotEnv
         super(RosbotNavigationEnv,
@@ -116,12 +105,18 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
                                    self.work_space_y_min
                                    ])
 
-        # We join both arrays
-        high = np.concatenate([high_laser, high_odometry, high_des_pos])
-        low = np.concatenate([low_laser, low_odometry, low_des_pos])
-        rospy.logdebug("Length of high:" + str(len(high)))
-
-        self.observation_space = spaces.Box(low, high)
+        self.observation_space = spaces.Dict({
+                                    "laser_scan": spaces.Box(low=low_laser,high=high_laser, dtype=np.float32),
+                                    "odom": spaces.Box(low=low_odometry, high=high_odometry, dtype=np.float32),
+                                    "desired_point": spaces.Box(low=low_des_pos, high=high_des_pos, dtype=np.float32)
+                                })
+        
+        # Action space
+        self.action_space = spaces.Box(
+            low=np.array([-self.max_linear_speed, -self.max_angular_speed]),
+            high=np.array([self.max_linear_speed, self.max_angular_speed]),
+            dtype=np.float32
+        )
         
         rospy.logdebug("OBSERVATION SPACE SHAPE===>"+str(self.observation_space.shape))
         rospy.logdebug("ACTION SPACES TYPE===>"+str(self.action_space))
@@ -165,7 +160,8 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
         self.index = 0
 
         new_position = Point()
-        new_position.x, new_position.y = get_goal()
+        new_position.x, new_position.y = \
+            self.random_goal.generate_random_goal(min_distance=0.4)
         self.update_desired_pos(new_position)
 
         odometry = self.get_odom()
@@ -181,8 +177,7 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
 
         rospy.logdebug("Start Set Action ==>"+str(action))
 
-        linear_speed = action[0]
-        angular_speed = action[1]
+        linear_speed, angular_speed = action
         last_action = f" linear_speed:{linear_speed}, angular_speed:{angular_speed}"
 
         # We tell Husarion the linear and angular speed to set to execute
@@ -215,18 +210,22 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
         roll, pitch, yaw = self.get_orientation_euler()
         # We round to only two decimals to avoid very big Observation space
         # We only want the X and Y position and the Yaw
-        odometry_array = [round(x_position, 1),
-                          round(y_position, 1),
-                          round(yaw, 1)]
+        odometry_array = [round(x_position, 2),
+                          round(y_position, 2),
+                          round(yaw, 2)]
 
         # We fetch also the desired position because it conditions the learning
         # It also make it dynamic, because we can change the desired position and the
         # learning will be able to adapt.
-        desired_position = [round(self.desired_position.x, 1),
-                            round(self.desired_position.y, 1)]
+        desired_position = [round(self.desired_position.x, 2),
+                            round(self.desired_position.y, 2)]
 
         # We concatenate all the lists.
-        observations = discretized_laser_scan + odometry_array + desired_position
+        observations = {
+            "laser_scan": discretized_laser_scan,
+            "odom": odometry_array,
+            "desired_point": desired_position
+        }
 
         rospy.logwarn("Observations==>"+str(observations))
         rospy.logwarn("END Get Observation ==>")
@@ -243,16 +242,16 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
 
         # We fetch data through the observations
         # Its all the array except from the last four elements, which are XY odom and XY des_pos
-        laser_readings = observations[:-5]
+        laser_readings = observations["laser_scan"]
 
         current_position = Point()
-        current_position.x = observations[-5]
-        current_position.y = observations[-4]
+        current_position.x = observations["odom"][0]
+        current_position.y = observations["odom"][1]
         current_position.z = 0.0
 
         desired_position = Point()
-        desired_position.x = observations[-2]
-        desired_position.y = observations[-1]
+        desired_position.x = observations["desired_point"][0]
+        desired_position.y = observations["desired_point"][1] 
         desired_position.z = 0.0
 
         rospy.logwarn("is DONE? laser_readings=" + str(laser_readings))
@@ -289,16 +288,16 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
 
         """
 
-        laser_readings = observations[:-5]
+        laser_readings = observations["laser_scan"]
 
         current_position = Point()
-        current_position.x = observations[-5]
-        current_position.y = observations[-4]
+        current_position.x = observations["odom"][0]
+        current_position.y = observations["odom"][1]
         current_position.z = 0.0
 
         desired_position = Point()
-        desired_position.x = observations[-2]
-        desired_position.y = observations[-1]
+        desired_position.x = observations["desired_point"][0]
+        desired_position.y = observations["desired_point"][1] 
         desired_position.z = 0.0
 
         distance_from_des_point = self.get_distance_from_desired_point(
@@ -319,7 +318,6 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
         if not done:
             reward = -3 + self.c_closer * distance_difference
         else:
-
             reached_des_pos = self.check_reached_desired_position(current_position,
                                                                   desired_position,
                                                                   self.precision_epsilon)
