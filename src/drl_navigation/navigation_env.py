@@ -3,7 +3,7 @@
 import rospy
 import numpy as np
 from gym import spaces
-from openai_ros.robot_envs import husarion_env
+from drl_navigation import rosbot_env
 from geometry_msgs.msg import Vector3
 from geometry_msgs.msg import Point
 from tf.transformations import euler_from_quaternion
@@ -14,7 +14,7 @@ from openai_ros.openai_ros_common import ROSLauncher
 from generate_goal import GenerateRandomGoal
 import os
 
-class RosbotNavigationEnv(husarion_env.HusarionEnv):
+class RosbotNavigationEnv(rosbot_env.RosbotEnv):
     def __init__(self):
         """
         This Task Env is designed for having the husarion in the husarion world
@@ -88,10 +88,10 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
 
         # We place the Maximum and minimum values of the X,Y and YAW of the odometry
         # The odometry yaw can be any value in the circunference.
-        high_odometry = np.array([self.work_space_x_max,
+        high_pose = np.array([self.work_space_x_max,
                                      self.work_space_y_max,
                                      3.14])
-        low_odometry = np.array([self.work_space_x_min,
+        low_pose = np.array([self.work_space_x_min,
                                     self.work_space_y_min,
                                     -1*3.14])
 
@@ -107,7 +107,7 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
 
         self.observation_space = spaces.Dict({
                                     "laser_scan": spaces.Box(low=low_laser,high=high_laser, dtype=np.float32),
-                                    "odom": spaces.Box(low=low_odometry, high=high_odometry, dtype=np.float32),
+                                    "pose": spaces.Box(low=low_pose, high=high_pose, dtype=np.float32),
                                     "desired_point": spaces.Box(low=low_des_pos, high=high_des_pos, dtype=np.float32)
                                 })
         
@@ -202,15 +202,15 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
                                                                   self.new_ranges
                                                                   )
         # We get the odometry so that SumitXL knows where it is.
-        odometry = self.get_odom()
-        x_position = odometry.pose.pose.position.x
-        y_position = odometry.pose.pose.position.y
+        global_pose = self.get_pose()
+        x_position = global_pose.pose.position.x
+        y_position = global_pose.pose.position.y
 
         # We get the orientation of the cube in RPY
         roll, pitch, yaw = self.get_orientation_euler()
         # We round to only two decimals to avoid very big Observation space
         # We only want the X and Y position and the Yaw
-        odometry_array = [round(x_position, 2),
+        global_pose_array = [round(x_position, 2),
                           round(y_position, 2),
                           round(yaw, 2)]
 
@@ -223,7 +223,7 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
         # We concatenate all the lists.
         observations = {
             "laser_scan": discretized_laser_scan,
-            "odom": odometry_array,
+            "pose": global_pose_array,
             "desired_point": desired_position
         }
 
@@ -245,8 +245,8 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
         laser_readings = observations["laser_scan"]
 
         current_position = Point()
-        current_position.x = observations["odom"][0]
-        current_position.y = observations["odom"][1]
+        current_position.x = observations["pose"][0]
+        current_position.y = observations["pose"][1]
         current_position.z = 0.0
 
         desired_position = Point()
@@ -291,8 +291,8 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
         laser_readings = observations["laser_scan"]
 
         current_position = Point()
-        current_position.x = observations["odom"][0]
-        current_position.y = observations["odom"][1]
+        current_position.x = observations["pose"][0]
+        current_position.y = observations["pose"][1]
         current_position.z = 0.0
 
         desired_position = Point()
@@ -411,10 +411,10 @@ class RosbotNavigationEnv(husarion_env.HusarionEnv):
 
     def get_orientation_euler(self):
         # We convert from quaternions to euler
-        orientation_list = [self.odom.pose.pose.orientation.x,
-                            self.odom.pose.pose.orientation.y,
-                            self.odom.pose.pose.orientation.z,
-                            self.odom.pose.pose.orientation.w]
+        orientation_list = [self.global_pose.pose.orientation.x,
+                            self.global_pose.pose.orientation.y,
+                            self.global_pose.pose.orientation.z,
+                            self.global_pose.pose.orientation.w]
 
         roll, pitch, yaw = euler_from_quaternion(orientation_list)
         return roll, pitch, yaw
