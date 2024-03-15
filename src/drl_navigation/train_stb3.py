@@ -27,20 +27,6 @@ def train(env, timesteps, log_dir, model_dir, stb3_algo="SAC"):
         model.learn(total_timesteps=timesteps, reset_num_timesteps=False)
         model.save(f"{model_dir}/{stb3_algo}_{timesteps*iters}")
 
-# def test(env, path_to_model):
-#     model = SAC.load(path_to_model, env=env)
-#     obs = env.reset()[0]
-#     done = False
-#     extra_steps = 500
-#     while True:
-#         action , _  = model.predict(obs)
-#         obs, _, done, _, _ = env.step(action)
-
-#         if done:
-#             extra_steps -= 1
-#             if extra_steps <= 0:
-#                 break
-
 def main():
     rospy.init_node('drl_node', anonymous=True, log_level=rospy.INFO)
     
@@ -60,21 +46,14 @@ def main():
     # # Loads parameters from the ROS param server
     # # Parameters are stored in a yaml file inside the config directory
     # # They are loaded at runtime by the launch file
-    timesteps = rospy.get_param("/stb3/timesteps")
-    stb3_algo = rospy.get_param("/stb3/algorithm")
+    timesteps = rospy.get_param("/training/timesteps")
+    stb3_algo = rospy.get_param("/training/algorithm")
 
     start_time = time.time()
     train(gymenv, timesteps, log_dir, model_dir, stb3_algo)
 
     rospy.loginfo("Training time: %s seconds" % (time.time() - start_time))
     gymenv.close()
-
-    # elif args.test:
-    #     if os.path.isfile(args.test):
-    #         gymenv = gym.make("BipedalWalker-v3",  render_mode="human")
-    #         test(gymenv, path_to_model=args.test)
-    #     else:
-    #         print(f"{args.test} not found.")
 
 if __name__ == '__main__':
     try:

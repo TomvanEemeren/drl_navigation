@@ -1,4 +1,4 @@
-stb3:
+training:
   timesteps: 10000
   algorithm: SAC
 
