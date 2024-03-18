@@ -10,12 +10,12 @@ husarion:
   init_linear_forward_speed: 0.0 # Initial linear speed in which we start each episode
   init_linear_turn_speed: 0.0 # Initial angular speed in shich we start each episode
   max_linear_speed: 0.2 # Max linear speed for going forward
-  max_angular_speed: 0.2 # Max angular speed for turning left or right
+  max_angular_speed: 1.0 # Max angular speed for turning left or right
 
   # Observation space parameters
-  new_ranges: 60 # How many laser readings we jump in each observation reading, the bigger the less laser resolution
+  new_ranges: 120 # How many laser readings we jump in each observation reading, the bigger the less laser resolution
   max_laser_value: 6.0  # Value considered Ok, no wall
-  min_laser_value: 0.15 # Value considered if there is an obstacle or crashed
+  min_laser_value: 0.2 # Value considered if there is an obstacle or crashed
 
   work_space: # 2D cube in which Husarion Cant surpass.
     x_max: 10.0
@@ -28,11 +28,13 @@ husarion:
                             # Note that angular is not because controller is too imprecise in sim.
   
   # Reward parameters
-  closer_to_point_reward: 25 # We give points for getting closer to the desired point
-  alive_reward: 0 # Point we give to just not not end the episode
-  goal_reached_points: 800 # Points given when ending an episode
-  goal_not_reached_points: -800 # Points given when ending an episode
-  c_closer: 200 # Coefficient for the closer_to_point_reward
-
+  goal_reached_points: 1000
+  goal_not_reached_points: -1000 
+  c_obstacle: -2
+  c_distance: -3
+  c_linear: -25
+  c_angular: -1
+  angular_threshold: 0.7
+  obstacle_threshold: 0.35
 
 

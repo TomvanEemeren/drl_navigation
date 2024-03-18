@@ -12,6 +12,7 @@ from std_msgs.msg import Header
 from openai_ros.task_envs.task_commons import LoadYamlFileParamsTest
 from openai_ros.openai_ros_common import ROSLauncher
 from generate_goal import GenerateRandomGoal
+from reward_function import RewardFunction
 import os
 
 class RosbotNavigationEnv(rosbot_env.RosbotEnv):
@@ -123,15 +124,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         rospy.logdebug("OBSERVATION SPACES TYPE===>" +
                        str(self.observation_space))
 
-        # Rewards
-        self.closer_to_point_reward = rospy.get_param(
-            "/husarion/closer_to_point_reward")
-        self.alive_reward = rospy.get_param("/husarion/alive_reward")
-        self.goal_reached_points = rospy.get_param(
-            "/husarion/goal_reached_points")
-        self.goal_not_reached_points = rospy.get_param(
-            "/husarion/goal_not_reached_points")
-        self.c_closer = rospy.get_param("/husarion/c_closer")
+        self.reward_function = RewardFunction()
 
         self.cumulated_steps = 0.0
 
@@ -146,6 +139,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                        epsilon=self.move_base_precision,
                        update_rate=10)
 
+        self.current_time = rospy.Time.now()
+
         return True
 
     def _init_env_variables(self):
@@ -154,19 +149,24 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         of an episode.
         :return:
         """
+        self.reset_amcl_initial_pose()
+
         # For Info Purposes
         self.cumulated_reward = 0.0
 
         self.index = 0
+
+        self.linear_speed = self.init_linear_forward_speed
+        self.angular_speed = self.init_linear_turn_speed
 
         new_position = Point()
         new_position.x, new_position.y = \
             self.random_goal.generate_random_goal(min_distance=0.4)
         self.update_desired_pos(new_position)
 
-        odometry = self.get_odom()
+        global_pose = self.get_pose()
         self.previous_distance_from_des_point = self.get_distance_from_desired_point(
-            odometry.pose.pose.position, self.desired_position)
+            global_pose.pose.position, self.desired_position)
 
     def _set_action(self, action):
         """
@@ -177,12 +177,16 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
 
         rospy.logdebug("Start Set Action ==>"+str(action))
 
-        linear_speed, angular_speed = action
-        last_action = f" linear_speed:{linear_speed}, angular_speed:{angular_speed}"
+        self.linear_speed, self.angular_speed = action
+        last_action = f" linear_speed:{self.linear_speed}, angular_speed:{self.angular_speed}"
+
+        self.previous_time = self.current_time
 
         # We tell Husarion the linear and angular speed to set to execute
-        self.move_base(linear_speed, angular_speed,
+        self.move_base(self.linear_speed, self.angular_speed,
                        epsilon=self.move_base_precision, update_rate=10)
+
+        self.current_time = rospy.Time.now()
 
         rospy.logdebug("END Set Action ==>"+str(action) +
                        ", ACTION="+str(last_action))
@@ -277,18 +281,13 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         return is_done
 
     def _compute_reward(self, observations, done):
-        """
-        We will reward the following behaviours:
-        1) The distance to the desired point has increase from last step
-        2) The robot has reached the desired point
-
-        We will penalise the following behaviours:
-        1) Ending the episode without reaching the desired pos. That means it has crashed
-        or it has gone outside the workspace
-
-        """
 
         laser_readings = observations["laser_scan"]
+
+        min_dist_to_obstacle = float('inf')
+        for laser_distance in laser_readings:
+            if laser_distance < min_dist_to_obstacle:
+                min_dist_to_obstacle = laser_distance
 
         current_position = Point()
         current_position.x = observations["pose"][0]
@@ -303,9 +302,6 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         distance_from_des_point = self.get_distance_from_desired_point(
             current_position, desired_position)
 
-        distance_difference = self.previous_distance_from_des_point - \
-            distance_from_des_point
-
         rospy.logwarn("current_position=" + str(current_position))
         rospy.logwarn("desired_point=" + str(desired_position))
 
@@ -313,26 +309,41 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                       str(self.previous_distance_from_des_point))
         rospy.logwarn("distance_from_des_point=" +
                       str(distance_from_des_point))
+
+        distance_difference = distance_from_des_point - \
+            self.previous_distance_from_des_point
+        
         rospy.logwarn("distance_difference=" + str(distance_difference))
 
+        time_passed = self.current_time - self.previous_time
+        time_passed_seconds = time_passed.to_sec()
+
         if not done:
-            reward = -3 + self.c_closer * distance_difference
+            reward = self.reward_function.compute_step_reward(distance_difference=distance_difference,
+                                                            distance_to_obstacle=min_dist_to_obstacle,
+                                                            linear_speed=self.linear_speed,
+                                                            angular_speed=self.angular_speed,
+                                                            time_passed=time_passed_seconds)
         else:
             reached_des_pos = self.check_reached_desired_position(current_position,
                                                                   desired_position,
                                                                   self.precision_epsilon)
 
             if reached_des_pos:
-                reward = self.goal_reached_points
+                reward = self.reward_function.get_termination_reward(goal_reached=True)
                 rospy.logwarn(
                     "GOT TO DESIRED POINT ; DONE, reward=" + str(reward))
+            elif self.check_husarion_has_crashed(laser_readings):
+                reward = self.reward_function.get_termination_reward(goal_reached=False)
+                rospy.logerr(
+                    "HUSARION HAS CRASHED ; DONE, reward=" + str(reward))
             else:
-                reward = self.goal_not_reached_points
+                reward = 0
                 rospy.logerr(
                     "SOMETHING WENT WRONG ; DONE, reward=" + str(reward))
 
         self.previous_distance_from_des_point = distance_from_des_point
-
+                
         rospy.logwarn("reward=" + str(reward))
         self.cumulated_reward += reward
         rospy.logdebug("Cumulated_reward=" + str(self.cumulated_reward))

@@ -1,2 +1,2 @@
 testing:
-  model_abspath:
+  model_abspath: /data/catkin_ws/src/drl_navigation/rl_models/SAC_320000.zip

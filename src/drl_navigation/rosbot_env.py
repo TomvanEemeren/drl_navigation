@@ -9,6 +9,7 @@ from sensor_msgs.msg import PointCloud2
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped
 from openai_ros.openai_ros_common import ROSLauncher
 
 
@@ -79,6 +80,8 @@ class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
         rospy.Subscriber("/scan", LaserScan,
                          self._laser_scan_callback)
         rospy.Subscriber("/rosbot/pose", PoseStamped, self._pose_callback)
+
+        self.initial_pose_pub = rospy.Publisher('/initialpose', PoseWithCovarianceStamped, queue_size=10)
 
         self._cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 
@@ -382,3 +385,27 @@ class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
     
     def get_pose(self):
         return self.global_pose
+    
+    def reset_amcl_initial_pose(self):
+        # Create a PoseWithCovarianceStamped message
+        initial_pose_msg = PoseWithCovarianceStamped()
+
+        # Fill in the header of the message
+        initial_pose_msg.header.stamp = rospy.Time.now()
+        initial_pose_msg.header.frame_id = "map"  # Set the frame ID to "map"
+
+        # Fill in the pose information (position and orientation)
+        # You need to provide the correct initial pose estimate here
+        initial_pose_msg.pose.pose.position.x = 0.0
+        initial_pose_msg.pose.pose.position.y = 0.0
+        initial_pose_msg.pose.pose.position.z = 0.0
+
+        initial_pose_msg.pose.pose.orientation.x = 0.0
+        initial_pose_msg.pose.pose.orientation.y = 0.0
+        initial_pose_msg.pose.pose.orientation.z = 0.0
+        initial_pose_msg.pose.pose.orientation.w = 1.0  # Identity quaternion (no rotation)
+
+        # Publish the initial pose
+        self.initial_pose_pub.publish(initial_pose_msg)
+
+        rospy.logwarn("AMCL initial pose reset.")

@@ -32,19 +32,18 @@ def test(env, path_to_model):
 def main():
     rospy.init_node('drl_node', anonymous=True, log_level=rospy.INFO)
     
-    env_name = rospy.get_param("/husarion/environment_name")
+    gymname = rospy.get_param("/husarion/environment_name")
 
     # # Loads parameters from the ROS param server
     # # Parameters are stored in a yaml file inside the config directory
     # # They are loaded at runtime by the launch file
     model_path = rospy.get_param("/testing/model_abspath")
 
-    gymenv.close()
-
     if os.path.isfile(model_path):
-        gymenv = Start_Environment(env_name)
+        gymenv = Start_Environment(gymname)
         rospy.loginfo("Gym environment done")
         test(gymenv, path_to_model=model_path)
+        gymenv.close()
     else:
         rospy.logerr(f"Model file not found at {model_path}")
 

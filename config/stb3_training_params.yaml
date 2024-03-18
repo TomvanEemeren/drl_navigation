@@ -1,5 +1,6 @@
 training:
   timesteps: 10000
   algorithm: SAC
+  batch_size: 1024
 
   
