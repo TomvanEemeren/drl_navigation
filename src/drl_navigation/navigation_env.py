@@ -139,7 +139,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                        epsilon=self.move_base_precision,
                        update_rate=10)
 
-        self.current_time = rospy.Time.now()
+        self.previous_time = rospy.Time.now()
 
         return True
 
@@ -180,13 +180,9 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         self.linear_speed, self.angular_speed = action
         last_action = f" linear_speed:{self.linear_speed}, angular_speed:{self.angular_speed}"
 
-        self.previous_time = self.current_time
-
         # We tell Husarion the linear and angular speed to set to execute
         self.move_base(self.linear_speed, self.angular_speed,
                        epsilon=self.move_base_precision, update_rate=10)
-
-        self.current_time = rospy.Time.now()
 
         rospy.logdebug("END Set Action ==>"+str(action) +
                        ", ACTION="+str(last_action))
@@ -301,6 +297,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
 
         distance_from_des_point = self.get_distance_from_desired_point(
             current_position, desired_position)
+        current_time = rospy.Time.now()
 
         rospy.logwarn("current_position=" + str(current_position))
         rospy.logwarn("desired_point=" + str(desired_position))
@@ -315,7 +312,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         
         rospy.logwarn("distance_difference=" + str(distance_difference))
 
-        time_passed = self.current_time - self.previous_time
+        time_passed = current_time - self.previous_time
         time_passed_seconds = time_passed.to_sec()
 
         if not done:
@@ -343,6 +340,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                     "SOMETHING WENT WRONG ; DONE, reward=" + str(reward))
 
         self.previous_distance_from_des_point = distance_from_des_point
+        self.previous_time = current_time
                 
         rospy.logwarn("reward=" + str(reward))
         self.cumulated_reward += reward

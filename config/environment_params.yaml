@@ -31,7 +31,7 @@ husarion:
   goal_reached_points: 500
   goal_not_reached_points: -500 
   c_obstacle: -2
-  c_distance: -3
+  c_distance: -2
   c_linear: -25
   c_angular: -1
   angular_threshold: 0.7
