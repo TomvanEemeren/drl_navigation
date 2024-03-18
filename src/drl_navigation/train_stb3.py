@@ -15,7 +15,7 @@ from stable_baselines3 import SAC, PPO
 # import our training environment
 from drl_navigation.env_utils import Start_Environment
 
-def train(env, timesteps, log_dir, model_dir, stb3_algo="SAC", batch_size=256):
+def train(env, timesteps, log_dir, model_dir, stb3_algo="SAC", batch_size=1024):
     if stb3_algo == "SAC":
         model = SAC("MultiInputPolicy", env, batch_size=batch_size, verbose=1, device="cuda", tensorboard_log=log_dir)
     else:
