@@ -3,8 +3,10 @@ husarion:
   ros_ws_abspath: /data/catkin_ws
 
   # Maps obtained with SLAM
-  map_yaml_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_map.yaml
-  map_pgm_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_map.pgm
+  map_yaml_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_no_object_map.yaml
+  map_pgm_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_no_object_map.pgm
+
+  robot_model_name: rosbot
 
   # Action space parameters
   init_linear_forward_speed: 0.0 # Initial linear speed in which we start each episode
@@ -13,15 +15,15 @@ husarion:
   max_angular_speed: 1.0 # Max angular speed for turning left or right
 
   # Observation space parameters
-  new_ranges: 12 # How many laser readings we jump in each observation reading, the bigger the less laser resolution
-  max_laser_value: 6.0  # Value considered Ok, no wall
+  new_ranges: 4 # How many laser readings we jump in each observation reading, the bigger the less laser resolution
+  max_laser_value: 10.0  # Value considered Ok, no wall
   min_laser_value: 0.2 # Value considered if there is an obstacle or crashed
 
   work_space: # 2D cube in which Husarion Cant surpass.
-    x_max: 10.0
-    x_min: -10.0
-    y_max: 10.0
-    y_min: -10.0
+    x_max: 6.0
+    x_min: -6.0
+    y_max: 6.0
+    y_min: -6.0
 
   precision_epsilon: 0.2 # How close we need to be to the desired point to consider it reached
   move_base_precision: 0.1  # We allow this difference between the asked linear speed and the real one. 
@@ -31,7 +33,7 @@ husarion:
   goal_reached_points: 500
   goal_not_reached_points: -500 
   c_obstacle: -2
-  c_distance: -2
+  c_distance: -10
   c_linear: -25
   c_angular: -1
   angular_threshold: 0.7

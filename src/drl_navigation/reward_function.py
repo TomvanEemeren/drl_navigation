@@ -15,7 +15,7 @@ class RewardFunction:
         self.d_thershold = rospy.get_param('/husarion/obstacle_threshold')
 
     def compute_step_reward(self, distance_difference, distance_to_obstacle, 
-                            linear_speed, angular_speed, time_passed):
+                            linear_speed, angular_speed):
         """
         Computes the reward for the current state.
 
@@ -35,7 +35,6 @@ class RewardFunction:
         self.distance_to_obstacle = distance_to_obstacle
         self.linear_speed = linear_speed
         self.angular_speed = angular_speed
-        self.time_passed = time_passed  
 
         reward = self.get_distance_reward() + self.get_velocity_reward() \
                     + self.get_rotation_reward() + self.get_obstacle_reward()
@@ -78,7 +77,7 @@ class RewardFunction:
         Returns:
             float: distance reward
         """
-        return self.c_d * self.distance_difference / (self.max_linear_speed * self.time_passed)
+        return self.c_d * self.distance_difference
     
     def get_velocity_reward(self):
         """

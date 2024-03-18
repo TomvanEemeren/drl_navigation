@@ -14,6 +14,7 @@ from openai_ros.openai_ros_common import ROSLauncher
 from generate_goal import GenerateRandomGoal
 from reward_function import RewardFunction
 import os
+import math
 
 class RosbotNavigationEnv(rosbot_env.RosbotEnv):
     def __init__(self):
@@ -64,9 +65,13 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         self.map_pgm_path = rospy.get_param("/husarion/map_pgm_abspath")
         self.random_goal = GenerateRandomGoal(self.map_yaml_path, self.map_pgm_path)
 
+        self.start_x, self.start_y, self.start_yaw = (0.0, 0.0, 0.0)
+
         self.desired_position = Point()
         self.desired_position.x, self.desired_position.y = \
-            self.random_goal.generate_random_goal(min_distance=0.4)
+            self.random_goal.generate_random_coordinate(min_distance=0.4, 
+                                                        invalid_coordinates=[(self.start_x, self.start_y)])
+        self.desired_position.z = 0.0
 
         self.precision_epsilon = rospy.get_param('/husarion/precision_epsilon')
 
@@ -90,31 +95,22 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         # We place the Maximum and minimum values of the X,Y and YAW of the odometry
         # The odometry yaw can be any value in the circunference.
         high_pose = np.array([self.work_space_x_max,
-                                     self.work_space_y_max,
-                                     3.14])
+                                     self.work_space_y_max,])
         low_pose = np.array([self.work_space_x_min,
-                                    self.work_space_y_min,
-                                    -1*3.14])
-
-        # Now we fetch the max and min of the Desired Position in 2D XY
-        # We use the exact same as the workspace, just because make no sense
-        # Consider points outside the workspace
-        high_des_pos = np.array([self.work_space_x_max,
-                                    self.work_space_y_max
-                                    ])
-        low_des_pos = np.array([self.work_space_x_min,
-                                   self.work_space_y_min
-                                   ])
+                                    self.work_space_y_min])
 
         self.observation_space = spaces.Dict({
                                     "laser_scan": spaces.Box(low=low_laser,high=high_laser, dtype=np.float32),
-                                    "pose": spaces.Box(low=low_pose, high=high_pose, dtype=np.float32),
-                                    "desired_point": spaces.Box(low=low_des_pos, high=high_des_pos, dtype=np.float32)
+                                    "relative_pose": spaces.Box(low=low_pose, high=high_pose, dtype=np.float32),
+                                    "heading": spaces.Box(low=-3.14, high=3.14, dtype=np.float32),
+                                    "previous_velocity": spaces.Box(low=np.array([-self.max_linear_speed, -self.max_angular_speed]), 
+                                                                    high=np.array([self.max_linear_speed, self.max_angular_speed]), 
+                                                                    dtype=np.float32),
                                 })
         
         # Action space
         self.action_space = spaces.Box(
-            low=np.array([-self.max_linear_speed, -self.max_angular_speed]),
+            low=np.array([0.0, -self.max_angular_speed]),
             high=np.array([self.max_linear_speed, self.max_angular_speed]),
             dtype=np.float32
         )
@@ -134,12 +130,13 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
     def _set_init_pose(self):
         """Sets the Robot in its init pose
         """
+        self.linear_speed = self.init_linear_forward_speed
+        self.angular_speed = self.init_linear_turn_speed
+        
         self.move_base(self.init_linear_forward_speed,
                        self.init_linear_turn_speed,
                        epsilon=self.move_base_precision,
                        update_rate=10)
-
-        self.previous_time = rospy.Time.now()
 
         return True
 
@@ -149,7 +146,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         of an episode.
         :return:
         """
-        self.reset_amcl_initial_pose()
+        # self.set_initial_pose([self.start_x, self.start_y, self.start_yaw])
+        self.reset_amcl_initial_pose([self.start_x, self.start_y, self.start_yaw])
 
         # For Info Purposes
         self.cumulated_reward = 0.0
@@ -161,7 +159,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
 
         new_position = Point()
         new_position.x, new_position.y = \
-            self.random_goal.generate_random_goal(min_distance=0.4)
+            self.random_goal.generate_random_coordinate(min_distance=0.4, 
+                                                        invalid_coordinates=[(self.start_x, self.start_y)])
         self.update_desired_pos(new_position)
 
         global_pose = self.get_pose()
@@ -205,26 +204,18 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         global_pose = self.get_pose()
         x_position = global_pose.pose.position.x
         y_position = global_pose.pose.position.y
+        
+        relative_x_pos = self.desired_position.x - x_position
+        retative_y_pos = self.desired_position.y - y_position
 
-        # We get the orientation of the cube in RPY
-        roll, pitch, yaw = self.get_orientation_euler()
-        # We round to only two decimals to avoid very big Observation space
-        # We only want the X and Y position and the Yaw
-        global_pose_array = [round(x_position, 2),
-                          round(y_position, 2),
-                          round(yaw, 2)]
-
-        # We fetch also the desired position because it conditions the learning
-        # It also make it dynamic, because we can change the desired position and the
-        # learning will be able to adapt.
-        desired_position = [round(self.desired_position.x, 2),
-                            round(self.desired_position.y, 2)]
+        relative_heading = math.atan2(relative_x_pos, retative_y_pos)
 
         # We concatenate all the lists.
         observations = {
             "laser_scan": discretized_laser_scan,
-            "pose": global_pose_array,
-            "desired_point": desired_position
+            "relative_pose": [relative_x_pos, retative_y_pos],
+            "heading": relative_heading,
+            "previous_velocity": [self.linear_speed, self.angular_speed]
         }
 
         rospy.logwarn("Observations==>"+str(observations))
@@ -243,25 +234,21 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         # We fetch data through the observations
         # Its all the array except from the last four elements, which are XY odom and XY des_pos
         laser_readings = observations["laser_scan"]
-
-        current_position = Point()
-        current_position.x = observations["pose"][0]
-        current_position.y = observations["pose"][1]
-        current_position.z = 0.0
-
-        desired_position = Point()
-        desired_position.x = observations["desired_point"][0]
-        desired_position.y = observations["desired_point"][1] 
-        desired_position.z = 0.0
+    
+        global_pose = self.get_pose()
+        current_pos = Point()
+        current_pos.x = global_pose.pose.position.x
+        current_pos.y = global_pose.pose.position.y
+        current_pos.z = 0.0
 
         rospy.logwarn("is DONE? laser_readings=" + str(laser_readings))
-        rospy.logwarn("is DONE? current_position=" + str(current_position))
-        rospy.logwarn("is DONE? desired_position=" + str(desired_position))
+        rospy.logwarn("is DONE? current_position=" + str(current_pos))
+        rospy.logwarn("is DONE? desired_position=" + str(self.desired_position))
 
         too_close_to_object = self.check_husarion_has_crashed(laser_readings)
-        inside_workspace = self.check_inside_workspace(current_position)
-        reached_des_pos = self.check_reached_desired_position(current_position,
-                                                              desired_position,
+        inside_workspace = self.check_inside_workspace(current_pos)
+        reached_des_pos = self.check_reached_desired_position(current_pos,
+                                                              self.desired_position,
                                                               self.precision_epsilon)
 
         is_done = too_close_to_object or not(
@@ -285,22 +272,14 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
             if laser_distance < min_dist_to_obstacle:
                 min_dist_to_obstacle = laser_distance
 
-        current_position = Point()
-        current_position.x = observations["pose"][0]
-        current_position.y = observations["pose"][1]
-        current_position.z = 0.0
-
-        desired_position = Point()
-        desired_position.x = observations["desired_point"][0]
-        desired_position.y = observations["desired_point"][1] 
-        desired_position.z = 0.0
+        current_pos = Point()
+        global_pose = self.get_pose()
+        current_pos.x = global_pose.pose.position.x
+        current_pos.y = global_pose.pose.position.y
+        current_pos.z = 0.0
 
         distance_from_des_point = self.get_distance_from_desired_point(
-            current_position, desired_position)
-        current_time = rospy.Time.now()
-
-        rospy.logwarn("current_position=" + str(current_position))
-        rospy.logwarn("desired_point=" + str(desired_position))
+            current_pos, self.desired_position)
 
         rospy.logwarn("total_distance_from_des_point=" +
                       str(self.previous_distance_from_des_point))
@@ -312,18 +291,14 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         
         rospy.logwarn("distance_difference=" + str(distance_difference))
 
-        time_passed = current_time - self.previous_time
-        time_passed_seconds = time_passed.to_sec()
-
         if not done:
             reward = self.reward_function.compute_step_reward(distance_difference=distance_difference,
                                                             distance_to_obstacle=min_dist_to_obstacle,
                                                             linear_speed=self.linear_speed,
-                                                            angular_speed=self.angular_speed,
-                                                            time_passed=time_passed_seconds)
+                                                            angular_speed=self.angular_speed)
         else:
-            reached_des_pos = self.check_reached_desired_position(current_position,
-                                                                  desired_position,
+            reached_des_pos = self.check_reached_desired_position(current_pos,
+                                                                  self.desired_position,
                                                                   self.precision_epsilon)
 
             if reached_des_pos:
@@ -338,10 +313,9 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                 reward = 0
                 rospy.logerr(
                     "SOMETHING WENT WRONG ; DONE, reward=" + str(reward))
-
+        
         self.previous_distance_from_des_point = distance_from_des_point
-        self.previous_time = current_time
-                
+        
         rospy.logwarn("reward=" + str(reward))
         self.cumulated_reward += reward
         rospy.logdebug("Cumulated_reward=" + str(self.cumulated_reward))
@@ -375,7 +349,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         rospy.logdebug("data=" + str(data))
         rospy.logdebug("new_ranges=" + str(new_ranges))
         rospy.logdebug("mod=" + str(mod))
-
+        
         nan_value = (self.min_laser_value + self.min_laser_value) / 2.0
 
         for i, item in enumerate(data.ranges):
@@ -419,11 +393,12 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         return discretized_ranges
 
     def get_orientation_euler(self):
+        global_pose = self.get_pose()
         # We convert from quaternions to euler
-        orientation_list = [self.global_pose.pose.orientation.x,
-                            self.global_pose.pose.orientation.y,
-                            self.global_pose.pose.orientation.z,
-                            self.global_pose.pose.orientation.w]
+        orientation_list = [global_pose.pose.orientation.x,
+                            global_pose.pose.orientation.y,
+                            global_pose.pose.orientation.z,
+                            global_pose.pose.orientation.w]
 
         roll, pitch, yaw = euler_from_quaternion(orientation_list)
         return roll, pitch, yaw

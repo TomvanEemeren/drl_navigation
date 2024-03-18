@@ -94,12 +94,13 @@ class GenerateRandomGoal:
 
         return occupied_coordinates, valid_coordinates
     
-    def generate_random_goal(self, min_distance=0.3):
+    def generate_random_coordinate(self, min_distance=0.3, invalid_coordinates=[]):
         """
         Generates a random goal coordinate that is far enough from occupied spaces.
 
-        Args:This does not really work, because self.width 
+        Args:
             min_distance (float): Minimum distance from occupied spaces.
+            invalid_coordinates (list): List of invalid coordinates to avoid.
 
         Returns:
             tuple: A tuple containing the random goal coordinates.
@@ -108,12 +109,12 @@ class GenerateRandomGoal:
             random_coordinate = random.choice(self.valid_coordinates)
             random_x, random_y = random_coordinate[0], random_coordinate[1]
             
-            # Check if the goal is far enough from occupied spaces
+            # Check if the goal is far enough from occupied spaces and invalid coordinates
             if all(math.sqrt((x - random_x)**2 + (y - random_y)**2) > min_distance 
-                   for x, y in self.occupied_coordinates):
+                   for x, y in self.occupied_coordinates + invalid_coordinates):
                 return random_x, random_y
 
-    def plot_map(self, goal_x=None, goal_y=None):
+    def plot_map(self, goal_x=None, goal_y=None, start_x=None, start_y=None):
         """
         Plots the map with occupied coordinates.
         """
@@ -121,6 +122,10 @@ class GenerateRandomGoal:
         plt.imshow(self.map_image, cmap='gray', origin='upper', 
                extent=[self.origin[0], self.origin[0] + self.width * self.resolution, 
                    self.origin[1], self.origin[1] + self.height * self.resolution])
+
+        if start_x is not None and start_y is not None:
+            plt.plot(start_x, start_y, 'o', color='blue')
+            plt.title('Obstacle map with random start')
 
         if goal_x is not None and goal_y is not None:
             plt.plot(goal_x, goal_y, 'o', color='orange')
@@ -134,10 +139,11 @@ class GenerateRandomGoal:
         plt.show()
 
 if __name__ == '__main__':
-    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_map.yaml"
-    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_map.pgm"
+    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_no_object_map.yaml"
+    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_no_object_map.pgm"
 
     random_goal = GenerateRandomGoal(map_yaml_path, map_pgm_path)
-    random_x, random_y = random_goal.generate_random_goal(min_distance=0.4)
-    print("Random goal:", random_x, random_y)
-    random_goal.plot_map(random_x, random_y)
+    start_x, start_y = random_goal.generate_random_coordinate(min_distance=0.4)
+    goal_x, goal_y = random_goal.generate_random_coordinate(min_distance=0.4, invalid_coordinates=[(start_x, start_y)])
+    print("Random goal:", goal_x, goal_y, "Random start:", start_x, start_y)
+    random_goal.plot_map(goal_x, goal_y, start_x, start_y)

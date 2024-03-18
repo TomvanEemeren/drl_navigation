@@ -11,7 +11,9 @@ from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from openai_ros.openai_ros_common import ROSLauncher
-
+from gazebo_msgs.srv import SetModelState, SetModelStateRequest
+import math
+from geometry_msgs.msg import Quaternion
 
 class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
     """Superclass for all CubeSingleDisk environments.
@@ -69,6 +71,8 @@ class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
         # self.controllers_object.reset_controllers()
         self._check_all_sensors_ready()
 
+        self.robot_model = rospy.get_param("/husarion/robot_model_name")
+
         # We Start all the ROS related Subscribers and publishers
         rospy.Subscriber("/odom", Odometry, self._odom_callback)
         rospy.Subscriber("/camera/depth/image_raw", Image,
@@ -82,6 +86,7 @@ class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
         rospy.Subscriber("/rosbot/pose", PoseStamped, self._pose_callback)
 
         self.initial_pose_pub = rospy.Publisher('/initialpose', PoseWithCovarianceStamped, queue_size=10)
+        self.odom_pub = rospy.Publisher('/odom', Odometry, queue_size=10)
 
         self._cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 
@@ -386,7 +391,7 @@ class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
     def get_pose(self):
         return self.global_pose
     
-    def reset_amcl_initial_pose(self):
+    def reset_amcl_initial_pose(self, initial_pose):
         # Create a PoseWithCovarianceStamped message
         initial_pose_msg = PoseWithCovarianceStamped()
 
@@ -396,16 +401,58 @@ class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
 
         # Fill in the pose information (position and orientation)
         # You need to provide the correct initial pose estimate here
-        initial_pose_msg.pose.pose.position.x = 0.0
-        initial_pose_msg.pose.pose.position.y = 0.0
+        initial_pose_msg.pose.pose.position.x = initial_pose[0]
+        initial_pose_msg.pose.pose.position.y = initial_pose[1]
         initial_pose_msg.pose.pose.position.z = 0.0
 
-        initial_pose_msg.pose.pose.orientation.x = 0.0
-        initial_pose_msg.pose.pose.orientation.y = 0.0
-        initial_pose_msg.pose.pose.orientation.z = 0.0
-        initial_pose_msg.pose.pose.orientation.w = 1.0  # Identity quaternion (no rotation)
+        yaw = initial_pose[2]
+        quaternion = Quaternion()
+        quaternion.x = 0.0
+        quaternion.y = 0.0
+        quaternion.z = math.sin(yaw / 2)
+        quaternion.w = math.cos(yaw / 2)
+
+        initial_pose_msg.pose.pose.orientation = quaternion
 
         # Publish the initial pose
         self.initial_pose_pub.publish(initial_pose_msg)
 
         rospy.logwarn("AMCL initial pose reset.")
+
+    def set_initial_pose(self, initial_pose):
+        """
+        Teleport the robot to the specified initial pose in Gazebo.
+        """
+        # Create a SetModelState service request
+        set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
+        
+        # Create a SetModelStateRequest message
+        request = SetModelStateRequest()
+
+        # Set the model's name
+        request.model_state.model_name = self.robot_model
+        
+        # Set the pose
+        request.model_state.pose.position.x = initial_pose[0]
+        request.model_state.pose.position.y = initial_pose[1]
+        request.model_state.pose.position.z = 0.0
+
+        yaw = initial_pose[2]
+        quaternion = Quaternion()
+        quaternion.x = 0.0
+        quaternion.y = 0.0
+        quaternion.z = math.sin(yaw / 2)
+        quaternion.w = math.cos(yaw / 2)
+
+        request.model_state.pose.orientation = quaternion
+
+        # Set the twist (optional)
+        request.model_state.twist = Twist()
+
+        # Call the service to set the model state
+        try:
+            resp = set_state(request)
+            if not resp.success:
+                rospy.logerr("Failed to set initial pose of the robot")
+        except rospy.ServiceException as e:
+            rospy.logerr("Service call failed: %s" % e)
