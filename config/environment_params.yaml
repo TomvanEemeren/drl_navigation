@@ -13,7 +13,7 @@ husarion:
   max_angular_speed: 1.0 # Max angular speed for turning left or right
 
   # Observation space parameters
-  new_ranges: 120 # How many laser readings we jump in each observation reading, the bigger the less laser resolution
+  new_ranges: 12 # How many laser readings we jump in each observation reading, the bigger the less laser resolution
   max_laser_value: 6.0  # Value considered Ok, no wall
   min_laser_value: 0.2 # Value considered if there is an obstacle or crashed
 

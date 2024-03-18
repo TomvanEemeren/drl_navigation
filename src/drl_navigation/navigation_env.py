@@ -403,8 +403,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                         discretized_ranges.append(
                             round(self.min_laser_value, 1))
                     else:
-                        rospy.logwarn(
-                            "Normal Item, no processing=>" + str(item))
+                        # rospy.logwarn(
+                        #     "Normal Item, no processing=>" + str(item))
                         discretized_ranges.append(round(item, 1))
                 # We add last value appended
                 filtered_range.append(discretized_ranges[-1])
@@ -463,7 +463,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         husarion_has_crashed = False
 
         for laser_distance in laser_readings:
-            rospy.logwarn("laser_distance==>"+str(laser_distance))
+            # rospy.logwarn("laser_distance==>"+str(laser_distance))
             if laser_distance == self.min_laser_value:
                 husarion_has_crashed = True
                 rospy.logwarn("HAS CRASHED==>"+str(laser_distance) +
