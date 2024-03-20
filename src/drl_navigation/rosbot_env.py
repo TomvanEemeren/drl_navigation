@@ -83,6 +83,8 @@ class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
                          self._camera_rgb_image_raw_callback)
         rospy.Subscriber("/scan", LaserScan,
                          self._laser_scan_callback)
+        rospy.Subscriber("/scan_filtered", LaserScan,
+                         self._filtered_scan_callback)
         rospy.Subscriber("/rosbot/pose", PoseStamped, self._pose_callback)
 
         self.initial_pose_pub = rospy.Publisher('/initialpose', PoseWithCovarianceStamped, queue_size=10)
@@ -118,6 +120,7 @@ class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
         self._check_camera_depth_points_ready()
         self._check_camera_rgb_image_raw_ready()
         self._check_laser_scan_ready()
+        self._check_filtered_scan_ready()
         self._check_pose_ready()
         rospy.logdebug("ALL SENSORS READY")
 
@@ -192,6 +195,20 @@ class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
                     "Current /scan not ready yet, retrying for getting laser_scan")
         return self.laser_scan
     
+    def _check_filtered_scan_ready(self):
+        self.filtered_scan = None
+        rospy.logdebug("Waiting for /scan_filtered to be READY...")
+        while self.filtered_scan is None and not rospy.is_shutdown():
+            try:
+                self.filtered_scan = rospy.wait_for_message(
+                    "/scan_filtered", LaserScan, timeout=1.0)
+                rospy.logdebug("Current /scan_filtered READY=>")
+
+            except:
+                rospy.logerr(
+                    "Current /scan_filtered not ready yet, retrying for getting filtered_scan")
+        return self.filtered_scan
+    
     def _check_pose_ready(self):
         self.global_pose = PoseStamped()
         rospy.logdebug("Waiting for /rosbot/pose to be READY...")
@@ -220,6 +237,9 @@ class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
 
     def _laser_scan_callback(self, data):
         self.laser_scan = data
+
+    def _filtered_scan_callback(self, data):
+        self.filtered_scan = data
 
     def _pose_callback(self, data):
         self.global_pose = data
@@ -387,6 +407,9 @@ class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
 
     def get_laser_scan(self):
         return self.laser_scan
+    
+    def get_filtered_scan(self):
+        return self.filtered_scan
     
     def get_pose(self):
         return self.global_pose

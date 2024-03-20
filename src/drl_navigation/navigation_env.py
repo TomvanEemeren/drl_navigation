@@ -103,7 +103,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                                     "laser_scan": spaces.Box(low=low_laser,high=high_laser, dtype=np.float32),
                                     "relative_pose": spaces.Box(low=low_pose, high=high_pose, dtype=np.float32),
                                     "heading": spaces.Box(low=-3.14, high=3.14, dtype=np.float32),
-                                    "previous_velocity": spaces.Box(low=np.array([-self.max_linear_speed, -self.max_angular_speed]), 
+                                    "previous_velocity": spaces.Box(low=np.array([0.0, -self.max_angular_speed]), 
                                                                     high=np.array([self.max_linear_speed, self.max_angular_speed]), 
                                                                     dtype=np.float32),
                                 })
@@ -195,7 +195,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         """
         rospy.logdebug("Start Get Observation ==>")
         # We get the laser scan data
-        laser_scan = self.get_laser_scan()
+        laser_scan = self.get_filtered_scan()
 
         discretized_laser_scan = self.discretize_scan_observation(laser_scan,
                                                                   self.new_ranges
@@ -205,20 +205,28 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         x_position = global_pose.pose.position.x
         y_position = global_pose.pose.position.y
         
-        relative_x_pos = self.desired_position.x - x_position
-        retative_y_pos = self.desired_position.y - y_position
+        delta_x = round(self.desired_position.x - x_position, 2)
+        delta_y = round(self.desired_position.y - y_position, 2)
+        yaw = self.get_orientation_euler()[2]
 
-        relative_heading = math.atan2(relative_x_pos, retative_y_pos)
+        heading = math.atan2(delta_y, delta_x) - yaw
+        normalised_heading = round(self.normalize_angle(heading), 2)
 
         # We concatenate all the lists.
         observations = {
             "laser_scan": discretized_laser_scan,
-            "relative_pose": [relative_x_pos, retative_y_pos],
-            "heading": relative_heading,
-            "previous_velocity": [self.linear_speed, self.angular_speed]
+            "relative_pose": [delta_x, delta_y],
+            "heading": normalised_heading,
+            "previous_velocity": [round(self.linear_speed, 2), 
+                                  round(self.angular_speed, 2)]
         }
 
-        rospy.logwarn("Observations==>"+str(observations))
+        rospy.logwarn("delta_x: " + str(delta_x))
+        rospy.logwarn("delta_y: " + str(delta_y))
+        rospy.logwarn("normalised_heading: " + str(normalised_heading))
+        rospy.logwarn("linear_speed: " + str(self.linear_speed))
+        rospy.logwarn("angular_speed: " + str(self.angular_speed))
+
         rospy.logwarn("END Get Observation ==>")
 
         return observations
@@ -234,16 +242,15 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         # We fetch data through the observations
         # Its all the array except from the last four elements, which are XY odom and XY des_pos
         laser_readings = observations["laser_scan"]
-    
+
         global_pose = self.get_pose()
         current_pos = Point()
         current_pos.x = global_pose.pose.position.x
         current_pos.y = global_pose.pose.position.y
         current_pos.z = 0.0
 
-        rospy.logwarn("is DONE? laser_readings=" + str(laser_readings))
-        rospy.logwarn("is DONE? current_position=" + str(current_pos))
-        rospy.logwarn("is DONE? desired_position=" + str(self.desired_position))
+        rospy.logwarn("is DONE? current_position=" + str(round(current_pos, 2)))
+        rospy.logwarn("is DONE? desired_position=" + str(round(self.desired_position, 2)))
 
         too_close_to_object = self.check_husarion_has_crashed(laser_readings)
         inside_workspace = self.check_inside_workspace(current_pos)
@@ -278,13 +285,14 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         current_pos.y = global_pose.pose.position.y
         current_pos.z = 0.0
 
-        distance_from_des_point = self.get_distance_from_desired_point(
-            current_pos, self.desired_position)
+        relative_pose = observations["relative_pose"]
+        distance_from_des_point = np.sqrt(
+            relative_pose[0]**2 + relative_pose[1]**2)
 
         rospy.logwarn("total_distance_from_des_point=" +
-                      str(self.previous_distance_from_des_point))
+                      str(round(self.previous_distance_from_des_point, 2)))
         rospy.logwarn("distance_from_des_point=" +
-                      str(distance_from_des_point))
+                      str(round(distance_from_des_point, 2)))
 
         distance_difference = distance_from_des_point - \
             self.previous_distance_from_des_point
@@ -295,7 +303,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
             reward = self.reward_function.compute_step_reward(distance_difference=distance_difference,
                                                             distance_to_obstacle=min_dist_to_obstacle,
                                                             linear_speed=self.linear_speed,
-                                                            angular_speed=self.angular_speed)
+                                                            angular_speed=self.angular_speed,
+                                                            heading=observations["heading"])
         else:
             reached_des_pos = self.check_reached_desired_position(current_pos,
                                                                   self.desired_position,
@@ -365,13 +374,9 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                 else:
                     # We clamp the laser readings
                     if item > self.max_laser_value:
-                        rospy.logwarn("Item Bigger Than MAX, CLAMPING=>" +
-                                      str(item)+", MAX="+str(self.max_laser_value))
                         discretized_ranges.append(
                             round(self.max_laser_value, 1))
                     elif item < self.min_laser_value:
-                        rospy.logwarn("Item smaller Than MIN, CLAMPING=>" +
-                                      str(item)+", MIN="+str(self.min_laser_value))
                         discretized_ranges.append(
                             round(self.min_laser_value, 1))
                     else:
@@ -383,9 +388,6 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
             else:
                 # We add value zero
                 filtered_range.append(0.0)
-
-        rospy.logwarn(
-            ">>>>>>>>>>>>>>>>>>>>>>discretized_ranges=>" + str(discretized_ranges))
 
         self.publish_filtered_laser_scan(laser_original_data=data,
                                          new_filtered_laser_range=filtered_range)
@@ -458,14 +460,6 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         """
         is_inside = False
 
-        rospy.logwarn("##### INSIDE WORK SPACE? #######")
-        rospy.logwarn("XYZ current_position"+str(current_position))
-        rospy.logwarn("work_space_x_max"+str(self.work_space_x_max) +
-                      ",work_space_x_min="+str(self.work_space_x_min))
-        rospy.logwarn("work_space_y_max"+str(self.work_space_y_max) +
-                      ",work_space_y_min="+str(self.work_space_y_min))
-        rospy.logwarn("############")
-
         if current_position.x > self.work_space_x_min and current_position.x <= self.work_space_x_max:
             if current_position.y > self.work_space_y_min and current_position.y <= self.work_space_y_max:
                 is_inside = True
@@ -536,3 +530,10 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
             laser_filtered_object.intensities.append(item)
 
         self.laser_filtered_pub.publish(laser_filtered_object)
+
+    def normalize_angle(self, angle):
+        while angle > math.pi:
+            angle -= 2.0 * math.pi
+        while angle < -math.pi:
+            angle += 2.0 * math.pi
+        return angle

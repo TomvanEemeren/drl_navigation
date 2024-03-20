@@ -15,28 +15,29 @@ husarion:
   max_angular_speed: 1.0 # Max angular speed for turning left or right
 
   # Observation space parameters
-  new_ranges: 4 # How many laser readings we jump in each observation reading, the bigger the less laser resolution
-  max_laser_value: 10.0  # Value considered Ok, no wall
+  new_ranges: 8 # How many laser readings we jump in each observation reading, the bigger the less laser resolution
+  max_laser_value: 6.0  # Value considered Ok, no wall
   min_laser_value: 0.2 # Value considered if there is an obstacle or crashed
 
   work_space: # 2D cube in which Husarion Cant surpass.
-    x_max: 6.0
-    x_min: -6.0
-    y_max: 6.0
-    y_min: -6.0
+    x_max: 3.0
+    x_min: -3.0
+    y_max: 3.0
+    y_min: -3.0
 
   precision_epsilon: 0.2 # How close we need to be to the desired point to consider it reached
   move_base_precision: 0.1  # We allow this difference between the asked linear speed and the real one. 
                             # Note that angular is not because controller is too imprecise in sim.
   
   # Reward parameters
-  goal_reached_points: 500
-  goal_not_reached_points: -500 
-  c_obstacle: -2
-  c_distance: -10
+  goal_reached_points: 1500
+  goal_not_reached_points: -1500 
+  c_obstacle: -5
+  c_distance: -20
   c_linear: -25
   c_angular: -1
-  angular_threshold: 0.7
+  c_heading: 1
+  angular_threshold: 0.8
   obstacle_threshold: 0.3
 
 

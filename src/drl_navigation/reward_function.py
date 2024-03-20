@@ -9,13 +9,14 @@ class RewardFunction:
         self.c_d = rospy.get_param('/husarion/c_distance')
         self.c_l = rospy.get_param('/husarion/c_linear')
         self.c_w = rospy.get_param('/husarion/c_angular')
+        self.c_h = rospy.get_param('/husarion/c_heading')
 
         self.max_linear_speed = rospy.get_param('/husarion/max_linear_speed')
         self.w_thershold = rospy.get_param('/husarion/angular_threshold')
         self.d_thershold = rospy.get_param('/husarion/obstacle_threshold')
 
     def compute_step_reward(self, distance_difference, distance_to_obstacle, 
-                            linear_speed, angular_speed):
+                            linear_speed, angular_speed, heading):
         """
         Computes the reward for the current state.
 
@@ -29,19 +30,18 @@ class RewardFunction:
         Returns:
             float: The computed reward.
         """
-        self.t1 = rospy.get_time()
 
         self.distance_difference = distance_difference
         self.distance_to_obstacle = distance_to_obstacle
         self.linear_speed = linear_speed
         self.angular_speed = angular_speed
+        self.heading = heading
 
         reward = self.get_distance_reward() + self.get_velocity_reward() \
-                    + self.get_rotation_reward() + self.get_obstacle_reward()
-        
-        self.t2 = rospy.get_time()
+                    + self.get_rotation_reward() + self.get_obstacle_reward() \
+                    + self.get_heading_reward() - 1
 
-        return reward
+        return round(reward, 4)
 
     def get_termination_reward(self, goal_reached):
         """
@@ -71,8 +71,7 @@ class RewardFunction:
     
     def get_distance_reward(self):
         """
-        Normalised reward for moving closer to the goal. The range
-        of the reward is [-1 1]
+        Reward for moving closer to the goal
 
         Returns:
             float: distance reward
@@ -101,3 +100,6 @@ class RewardFunction:
             return self.c_w * abs(self.angular_speed)
         else:
             return 0
+        
+    def get_heading_reward(self):
+        return -self.c_h * abs(self.heading)

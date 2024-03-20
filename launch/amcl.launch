@@ -37,4 +37,6 @@
   <rosparam command="load" file="$(find drl_navigation)/config/common_params.yaml" />
   <node pkg="drl_navigation" type="pose_publisher.py" name="pose_publisher" output="screen" />
 
+  <include file="$(find drl_navigation)/launch/laser_filter.launch" />
+
 </launch>
