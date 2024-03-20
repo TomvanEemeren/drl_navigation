@@ -249,8 +249,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         current_pos.y = global_pose.pose.position.y
         current_pos.z = 0.0
 
-        rospy.logwarn("is DONE? current_position=" + str(round(current_pos, 2)))
-        rospy.logwarn("is DONE? desired_position=" + str(round(self.desired_position, 2)))
+        rospy.logwarn("is DONE? current_position=" + str(current_pos))
+        rospy.logwarn("is DONE? desired_position=" + str(self.desired_position))
 
         too_close_to_object = self.check_husarion_has_crashed(laser_readings)
         inside_workspace = self.check_inside_workspace(current_pos)
