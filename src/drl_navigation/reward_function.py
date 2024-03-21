@@ -1,4 +1,5 @@
 import rospy    
+import numpy as np
 
 class RewardFunction:
 
@@ -41,7 +42,7 @@ class RewardFunction:
                     + self.get_rotation_reward() + self.get_obstacle_reward() \
                     + self.get_heading_reward() - 1
 
-        return round(reward, 4)
+        return np.round(reward, 4)
 
     def get_termination_reward(self, goal_reached):
         """

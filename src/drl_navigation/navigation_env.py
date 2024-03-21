@@ -98,11 +98,14 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                                      self.work_space_y_max,])
         low_pose = np.array([self.work_space_x_min,
                                     self.work_space_y_min])
+        
+        low_heading = np.array([-3.14])
+        high_heading = np.array([3.14])
 
         self.observation_space = spaces.Dict({
                                     "laser_scan": spaces.Box(low=low_laser,high=high_laser, dtype=np.float32),
                                     "relative_pose": spaces.Box(low=low_pose, high=high_pose, dtype=np.float32),
-                                    "heading": spaces.Box(low=-3.14, high=3.14, dtype=np.float32),
+                                    "heading": spaces.Box(low=low_heading, high=high_heading, dtype=np.float32),
                                     "previous_velocity": spaces.Box(low=np.array([0.0, -self.max_angular_speed]), 
                                                                     high=np.array([self.max_linear_speed, self.max_angular_speed]), 
                                                                     dtype=np.float32),
@@ -214,11 +217,11 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
 
         # We concatenate all the lists.
         observations = {
-            "laser_scan": discretized_laser_scan,
-            "relative_pose": [delta_x, delta_y],
-            "heading": normalised_heading,
-            "previous_velocity": [round(self.linear_speed, 2), 
-                                  round(self.angular_speed, 2)]
+            "laser_scan": np.array(discretized_laser_scan, dtype=np.float32),
+            "relative_pose": np.array([delta_x, delta_y], dtype=np.float32),
+            "heading": np.array([normalised_heading], dtype=np.float32),
+            "previous_velocity": np.array([round(self.linear_speed, 2), 
+                                  round(self.angular_speed, 2)], dtype=np.float32)
         }
 
         rospy.logwarn("delta_x: " + str(delta_x))

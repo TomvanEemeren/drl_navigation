@@ -17,17 +17,13 @@ from drl_navigation.env_utils import Start_Environment
 
 def test(env, path_to_model):
     model = SAC.load(path_to_model, env=env)
-    obs = env.reset()[0]
-    done = False
-    extra_steps = 500
-    while True:
-        action , _  = model.predict(obs)
-        obs, _, done, _, _ = env.step(action)
 
-        if done:
-            extra_steps -= 1
-            if extra_steps <= 0:
-                break
+    for _ in range(100):
+        obs = env.reset()
+        done = False
+        while not done:
+            action, _ = model.predict(obs)
+            obs, _, done, _ = env.step(action)
 
 def main():
     rospy.init_node('drl_node', anonymous=True, log_level=rospy.INFO)
