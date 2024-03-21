@@ -42,7 +42,7 @@ class RewardFunction:
                     + self.get_rotation_reward() + self.get_obstacle_reward() \
                     + self.get_heading_reward() - 1
 
-        return np.round(reward, 4)
+        return round(reward, 4)
 
     def get_termination_reward(self, goal_reached):
         """
@@ -101,6 +101,12 @@ class RewardFunction:
             return self.c_w * abs(self.angular_speed)
         else:
             return 0
-        
+
     def get_heading_reward(self):
+        """
+        Reward for maintaining a desired heading.
+
+        Returns:
+            float: heading reward
+        """
         return -self.c_h * abs(self.heading)

@@ -274,13 +274,14 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         return is_done
 
     def _compute_reward(self, observations, done):
-
+        
         laser_readings = observations["laser_scan"]
+        min_dist_to_obstacle = float(np.min(laser_readings))
 
-        min_dist_to_obstacle = float('inf')
-        for laser_distance in laser_readings:
-            if laser_distance < min_dist_to_obstacle:
-                min_dist_to_obstacle = laser_distance
+        heading = observations["heading"][0]
+
+        linear_speed = observations["previous_velocity"][0]
+        angular_speed = observations["previous_velocity"][1]
 
         current_pos = Point()
         global_pose = self.get_pose()
@@ -305,9 +306,9 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         if not done:
             reward = self.reward_function.compute_step_reward(distance_difference=distance_difference,
                                                             distance_to_obstacle=min_dist_to_obstacle,
-                                                            linear_speed=self.linear_speed,
-                                                            angular_speed=self.angular_speed,
-                                                            heading=observations["heading"])
+                                                            linear_speed=linear_speed,
+                                                            angular_speed=angular_speed,
+                                                            heading=heading)
         else:
             reached_des_pos = self.check_reached_desired_position(current_pos,
                                                                   self.desired_position,
@@ -443,12 +444,15 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         max_laser_value = np.float32(self.max_laser_value)
 
         for laser_distance in laser_readings:
-            if laser_distance <= min_laser_value:
+            if laser_distance == min_laser_value:
                 husarion_has_crashed = True
                 rospy.logwarn("HAS CRASHED==>"+str(laser_distance) +
                               ", min="+str(min_laser_value))
                 break
 
+            elif laser_distance < min_laser_value:
+                rospy.logerr("Value of laser shouldnt be lower than min==>" +
+                             str(laser_distance)+", min="+str(min_laser_value))
             elif laser_distance > max_laser_value:
                 rospy.logerr("Value of laser shouldnt be higher than max==>" +
                              str(laser_distance)+", max="+str(max_laser_value))
