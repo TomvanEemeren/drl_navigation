@@ -439,21 +439,19 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         the minimum distance acceptable.
         """
         husarion_has_crashed = False
+        min_laser_value = np.float32(self.min_laser_value)
+        max_laser_value = np.float32(self.max_laser_value)
 
         for laser_distance in laser_readings:
-            # rospy.logwarn("laser_distance==>"+str(laser_distance))
-            if laser_distance == self.min_laser_value:
+            if laser_distance <= min_laser_value:
                 husarion_has_crashed = True
                 rospy.logwarn("HAS CRASHED==>"+str(laser_distance) +
-                              ", min="+str(self.min_laser_value))
+                              ", min="+str(min_laser_value))
                 break
 
-            elif laser_distance < self.min_laser_value:
-                rospy.logerr("Value of laser shouldnt be lower than min==>" +
-                             str(laser_distance)+", min="+str(self.min_laser_value))
-            elif laser_distance > self.max_laser_value:
+            elif laser_distance > max_laser_value:
                 rospy.logerr("Value of laser shouldnt be higher than max==>" +
-                             str(laser_distance)+", max="+str(self.min_laser_value))
+                             str(laser_distance)+", max="+str(max_laser_value))
 
         return husarion_has_crashed
 
