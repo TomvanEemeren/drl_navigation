@@ -59,6 +59,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         self.work_space_x_min = rospy.get_param("/husarion/work_space/x_min")
         self.work_space_y_max = rospy.get_param("/husarion/work_space/y_max")
         self.work_space_y_min = rospy.get_param("/husarion/work_space/y_min")
+        self.min_goal_x = rospy.get_param("/husarion/min_goal_x", default=None)
 
         # Get a random goal
         self.map_yaml_path = rospy.get_param("/husarion/map_yaml_abspath")
@@ -70,7 +71,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         self.desired_position = Point()
         self.desired_position.x, self.desired_position.y = \
             self.random_goal.generate_random_coordinate(min_distance=0.4, 
-                                                        invalid_coordinates=[(self.start_x, self.start_y)])
+                                                        invalid_coordinates=[(self.start_x, self.start_y)],
+                                                        min_x=self.min_goal_x)
         self.desired_position.z = 0.0
 
         self.precision_epsilon = rospy.get_param('/husarion/precision_epsilon')
@@ -86,7 +88,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         super(RosbotNavigationEnv,
               self).__init__(ros_ws_abspath)
 
-        laser_scan = self._check_laser_scan_ready()
+        laser_scan = self._check_filtered_scan_ready()
         num_laser_readings = int(len(laser_scan.ranges)/self.new_ranges)
         rospy.logdebug("Number of laser readings===>" + str(num_laser_readings))
         high_laser = np.full((num_laser_readings), self.max_laser_value)
@@ -163,7 +165,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         new_position = Point()
         new_position.x, new_position.y = \
             self.random_goal.generate_random_coordinate(min_distance=0.4, 
-                                                        invalid_coordinates=[(self.start_x, self.start_y)])
+                                                        invalid_coordinates=[(self.start_x, self.start_y)],
+                                                        min_x=self.min_goal_x)
         self.update_desired_pos(new_position)
 
         global_pose = self.get_pose()
@@ -203,6 +206,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         discretized_laser_scan = self.discretize_scan_observation(laser_scan,
                                                                   self.new_ranges
                                                                   )
+
         # We get the odometry so that SumitXL knows where it is.
         global_pose = self.get_pose()
         x_position = global_pose.pose.position.x
@@ -278,6 +282,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         laser_readings = observations["laser_scan"]
         min_dist_to_obstacle = float(np.min(laser_readings))
 
+        rospy.logwarn("min_dist_to_obstacle=" + str(min_dist_to_obstacle))
+
         heading = observations["heading"][0]
 
         linear_speed = observations["previous_velocity"][0]
@@ -290,7 +296,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         current_pos.z = 0.0
 
         relative_pose = observations["relative_pose"]
-        distance_from_des_point = np.sqrt(
+        distance_from_des_point = math.sqrt(
             relative_pose[0]**2 + relative_pose[1]**2)
 
         rospy.logwarn("total_distance_from_des_point=" +
@@ -478,30 +484,14 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
 
         is_in_desired_pos = False
 
-        x_pos_plus = desired_position.x + epsilon
-        x_pos_minus = desired_position.x - epsilon
-        y_pos_plus = desired_position.y + epsilon
-        y_pos_minus = desired_position.y - epsilon
+        distance_from_des_point = math.sqrt((current_position.x - desired_position.x)**2 
+                                          + (current_position.y - desired_position.y)**2)
 
-        x_current = current_position.x
-        y_current = current_position.y
-
-        x_pos_are_close = (x_current <= x_pos_plus) and (
-            x_current > x_pos_minus)
-        y_pos_are_close = (y_current <= y_pos_plus) and (
-            y_current > y_pos_minus)
-
-        is_in_desired_pos = x_pos_are_close and y_pos_are_close
+        is_in_desired_pos = distance_from_des_point <= epsilon
 
         rospy.logdebug("###### IS DESIRED POS ? ######")
         rospy.logdebug("epsilon==>"+str(epsilon))
         rospy.logdebug("current_position"+str(current_position))
-        rospy.logdebug("x_pos_plus"+str(x_pos_plus) +
-                       ",x_pos_minus="+str(x_pos_minus))
-        rospy.logdebug("y_pos_plus"+str(y_pos_plus) +
-                       ",y_pos_minus="+str(y_pos_minus))
-        rospy.logdebug("x_pos_are_close"+str(x_pos_are_close))
-        rospy.logdebug("y_pos_are_close"+str(y_pos_are_close))
         rospy.logdebug("is_in_desired_pos"+str(is_in_desired_pos))
         rospy.logdebug("############")
 

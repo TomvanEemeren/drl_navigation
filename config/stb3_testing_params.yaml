@@ -1,2 +1,2 @@
 testing:
-  model_abspath: /data/catkin_ws/src/drl_navigation/rl_models/SAC_320000.zip
+  model_abspath: /data/rl_data/traning_env_one_object/models/SAC_750000.zip

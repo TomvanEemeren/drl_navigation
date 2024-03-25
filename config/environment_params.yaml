@@ -16,8 +16,10 @@ husarion:
 
   # Observation space parameters
   new_ranges: 8 # How many laser readings we jump in each observation reading, the bigger the less laser resolution
-  max_laser_value: 6.0  # Value considered Ok, no wall
+  max_laser_value: 10.0  # Value considered Ok, no wall
   min_laser_value: 0.2 # Value considered if there is an obstacle or crashed
+  lower_angle: -1.57
+  upper_angle: 1.57
 
   work_space: # 2D cube in which Husarion Cant surpass.
     x_max: 3.0
@@ -32,12 +34,12 @@ husarion:
   # Reward parameters
   goal_reached_points: 1500
   goal_not_reached_points: -1500 
-  c_obstacle: -5
+  c_obstacle: -20
   c_distance: -20
-  c_linear: -25
+  c_linear: -50
   c_angular: -1
   c_heading: 1
   angular_threshold: 0.8
-  obstacle_threshold: 0.3
+  obstacle_threshold: 0.4
 
 

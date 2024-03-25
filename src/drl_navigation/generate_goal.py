@@ -94,13 +94,15 @@ class GenerateRandomGoal:
 
         return occupied_coordinates, valid_coordinates
     
-    def generate_random_coordinate(self, min_distance=0.3, invalid_coordinates=[]):
+    def generate_random_coordinate(self, min_distance=0.3, invalid_coordinates=[], min_x=None, min_y=None):
         """
         Generates a random goal coordinate that is far enough from occupied spaces.
 
         Args:
             min_distance (float): Minimum distance from occupied spaces.
             invalid_coordinates (list): List of invalid coordinates to avoid.
+            min_x (float): Minimum x value for the random coordinate.
+            min_y (float): Minimum y value for the random coordinate.
 
         Returns:
             tuple: A tuple containing the random goal coordinates.
@@ -112,6 +114,10 @@ class GenerateRandomGoal:
             # Check if the goal is far enough from occupied spaces and invalid coordinates
             if all(math.sqrt((x - random_x)**2 + (y - random_y)**2) > min_distance 
                    for x, y in self.occupied_coordinates + invalid_coordinates):
+                if min_x is not None and random_x < min_x:
+                    continue
+                if min_y is not None and random_y < min_y:
+                    continue
                 return random_x, random_y
 
     def plot_map(self, goal_x=None, goal_y=None, start_x=None, start_y=None):
@@ -139,11 +145,13 @@ class GenerateRandomGoal:
         plt.show()
 
 if __name__ == '__main__':
-    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_no_object_map.yaml"
-    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_no_object_map.pgm"
+    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_one_object_map.yaml"
+    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_one_object_map.pgm"
 
     random_goal = GenerateRandomGoal(map_yaml_path, map_pgm_path)
     start_x, start_y = random_goal.generate_random_coordinate(min_distance=0.4)
-    goal_x, goal_y = random_goal.generate_random_coordinate(min_distance=0.4, invalid_coordinates=[(start_x, start_y)])
+    goal_x, goal_y = random_goal.generate_random_coordinate(min_distance=0.4, 
+                                                            invalid_coordinates=[(start_x, start_y)],
+                                                            min_x=1.8)
     print("Random goal:", goal_x, goal_y, "Random start:", start_x, start_y)
     random_goal.plot_map(goal_x, goal_y, start_x, start_y)

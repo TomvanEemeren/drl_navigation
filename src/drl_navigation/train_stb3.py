@@ -15,9 +15,15 @@ from stable_baselines3 import SAC, PPO
 # import our training environment
 from drl_navigation.env_utils import Start_Environment
 
-def train(env, timesteps, log_dir, model_dir, stb3_algo="SAC", batch_size=1024):
+def train(env, timesteps, log_dir, model_dir, stb3_algo="SAC", batch_size=1024, 
+          continue_training=False, model_path=None):
+    
     if stb3_algo == "SAC":
-        model = SAC("MultiInputPolicy", env, batch_size=batch_size, verbose=1, device="cuda", tensorboard_log=log_dir)
+        if continue_training:
+                model = SAC.load(model_path, env, batch_size=batch_size, tensorboard_log=log_dir)
+        else:
+            model = SAC("MultiInputPolicy", env, batch_size=batch_size, 
+                        verbose=1, device="cuda", tensorboard_log=log_dir)
     else:
         raise ValueError("Invalid stb3_algo value. Supported values are SAC and PPO.")
 
@@ -50,8 +56,12 @@ def main():
     stb3_algo = rospy.get_param("/training/algorithm")
     batch_size = rospy.get_param("/training/batch_size")
 
+    continue_training = rospy.get_param("/training/continue_training", default=False)
+    model_path = rospy.get_param("/training/model_path", default=None)
+
     start_time = time.time()
-    train(gymenv, timesteps, log_dir, model_dir, stb3_algo, batch_size)
+    train(gymenv, timesteps, log_dir, model_dir, stb3_algo, 
+          batch_size, continue_training, model_path)
 
     rospy.loginfo("Training time: %s seconds" % (time.time() - start_time))
     gymenv.close()
