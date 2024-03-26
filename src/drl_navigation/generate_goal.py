@@ -145,13 +145,13 @@ class GenerateRandomGoal:
         plt.show()
 
 if __name__ == '__main__':
-    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_one_object_map.yaml"
-    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_one_object_map.pgm"
+    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_one_object_2_map.yaml"
+    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_one_object_2_map.pgm"
 
     random_goal = GenerateRandomGoal(map_yaml_path, map_pgm_path)
     start_x, start_y = random_goal.generate_random_coordinate(min_distance=0.4)
     goal_x, goal_y = random_goal.generate_random_coordinate(min_distance=0.4, 
                                                             invalid_coordinates=[(start_x, start_y)],
-                                                            min_x=1.8)
+                                                            min_x=None)
     print("Random goal:", goal_x, goal_y, "Random start:", start_x, start_y)
     random_goal.plot_map(goal_x, goal_y, start_x, start_y)

@@ -96,10 +96,11 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
 
         # We place the Maximum and minimum values of the X,Y and YAW of the odometry
         # The odometry yaw can be any value in the circunference.
-        high_pose = np.array([self.work_space_x_max,
-                                     self.work_space_y_max,])
-        low_pose = np.array([self.work_space_x_min,
-                                    self.work_space_y_min])
+        high_pose = np.array([self.work_space_x_max - self.work_space_x_min,
+                              self.work_space_y_max - self.work_space_y_min])
+
+        low_pose = np.array([-self.work_space_x_max + self.work_space_x_min,
+                             -self.work_space_y_max + self.work_space_y_min])
         
         low_heading = np.array([-3.14])
         high_heading = np.array([3.14])

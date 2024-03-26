@@ -3,8 +3,8 @@ husarion:
   ros_ws_abspath: /data/catkin_ws
 
   # Maps obtained with SLAM
-  map_yaml_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_no_object_map.yaml
-  map_pgm_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_no_object_map.pgm
+  map_yaml_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_one_object_2_map.yaml
+  map_pgm_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_one_object_2_map.pgm
 
   robot_model_name: rosbot
 
@@ -22,10 +22,10 @@ husarion:
   upper_angle: 1.57
 
   work_space: # 2D cube in which Husarion Cant surpass.
-    x_max: 3.0
-    x_min: -3.0
-    y_max: 3.0
-    y_min: -3.0
+    x_max: 5.0
+    x_min: -5.0
+    y_max: 5.0
+    y_min: -5.0
 
   precision_epsilon: 0.2 # How close we need to be to the desired point to consider it reached
   move_base_precision: 0.1  # We allow this difference between the asked linear speed and the real one. 
