@@ -1,4 +1,4 @@
-image: training_env_one_object_2_map.pgm
+image: training_env_no_object.pgm
 resolution: 0.050000
 origin: [-5.000000, -5.000000, 0.000000]
 negate: 0

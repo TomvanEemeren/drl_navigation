@@ -2,10 +2,6 @@ husarion:
   environment_name: RosbotNavigation-v0
   ros_ws_abspath: /data/catkin_ws
 
-  # Maps obtained with SLAM
-  map_yaml_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_sink.yaml
-  map_pgm_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_sink.pgm
-
   robot_model_name: rosbot
 
   # Action space parameters

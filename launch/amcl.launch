@@ -2,12 +2,12 @@
 
   <arg name="rosbot_pro" default="false" />
   <arg name="use_gazebo" default="false" />
-  <arg name="world" default="empty"/>
+  <arg name="env_name" default="training_env"/>
 
   <!-- Gazebo -->
   <group if="$(arg use_gazebo)">
     <include file="$(find drl_navigation)/launch/training_env.launch">
-      <arg name="world" value="$(arg world)" />
+      <arg name="env_name" value="$(arg env_name)" />
     </include>
     <include file="$(find rosbot_description)/launch/rosbot_gazebo.launch"/>
     <param name="use_sim_time" value="true" />
@@ -32,7 +32,7 @@
     <param name="odom_alpha4" value="0.5"/>
   </node>
 
-  <arg name="map_file" default="$(find drl_navigation)/maps/training_env_sink.yaml"/>       <!-- path of map file -->
+  <arg name="map_file" default="$(find drl_navigation)/maps/$(arg env_name).yaml"/>
   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" respawn="true" />
   
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find drl_navigation)/rviz/slam_config.rviz" />

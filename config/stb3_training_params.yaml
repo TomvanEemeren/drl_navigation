@@ -2,6 +2,7 @@ training:
   timesteps: 10000
   algorithm: SAC
   batch_size: 1024
-
+  model_name: SAC
+  
   continue_training: False
   model_path: /data/rl_data/training_env_no_object_2/models/SAC_190000.zip

@@ -31,9 +31,9 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                                                " DOESNT exist, execute: mkdir -p " + ros_ws_abspath + \
                                                "/src;cd " + ros_ws_abspath + ";catkin_make"
 
-        ROSLauncher(rospackage_name="drl_navigation",
-                    launch_file_name="training_env.launch",
-                    ros_ws_abspath=ros_ws_abspath)
+        # ROSLauncher(rospackage_name="drl_navigation",
+        #             launch_file_name="training_env.launch",
+        #             ros_ws_abspath=ros_ws_abspath)
 
         # Load Params from the desired Yaml file
         LoadYamlFileParamsTest(rospackage_name="drl_navigation",

@@ -1,12 +1,12 @@
 <launch>
 
     <arg name="use_gazebo" default="true" />
-    <arg name="world" default="empty"/>
+    <arg name="env_name" default="training_env"/>
 
     <!-- Gazebo -->
     <group if="$(arg use_gazebo)">
         <include file="$(find drl_navigation)/launch/training_env.launch">
-            <arg name="world" value="$(arg world)" />
+            <arg name="env_name" value="$(arg env_name)" />
         </include>
         <include file="$(find rosbot_description)/launch/rosbot_gazebo.launch"/>
         <param name="use_sim_time" value="true" />

@@ -1,16 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <launch>
+    <arg name="env_name" default="training_env" />
+    <arg name="use_gazebo" default="true" />
 
-    <arg name="world" default="empty" />
+    <group if="$(arg use_gazebo)">
+        <include file="$(find drl_navigation)/launch/training_env.launch">
+            <arg name="env_name" value="$(arg env_name)" />
+        </include>
+        <param name="use_sim_time" value="true" />
+    </group>
 
     <!-- This version uses the openai_ros environments -->
     <rosparam command="load" file="$(find drl_navigation)/config/stb3_training_params.yaml" />
     <rosparam command="load" file="$(find drl_navigation)/config/environment_params.yaml" />
+
+    <rosparam>
+        husarion:
+            map_yaml_abspath: /catkin_ws/src/drl_navigation/maps/map.yaml
+            map_pgm_abspath: /catkin_ws/src/drl_navigation/maps/map.pgm
+    </rosparam>
+
+    <rosparam param="husarion/map_yaml_abspath" subst_value="True">
+        $(find drl_navigation)/maps/$(arg env_name).yaml
+    </rosparam>
+
+    <rosparam param="husarion/map_pgm_abspath" subst_value="True">
+        $(find drl_navigation)/maps/$(arg env_name).pgm
+    </rosparam>
+
     <!-- Launch the training system -->
+    <param name="training_env" type="str" value="$(arg env_name)" />
     <node pkg="drl_navigation" name="rosbot_drl_navigation" type="train_stb3.py" output="screen" />
 
     <include file="$(find drl_navigation)/launch/amcl.launch">
-        <arg name="world" value="$(arg world)" />
+        <arg name="env_name" value="$(arg env_name)" />
     </include> 
 </launch>
