@@ -3,8 +3,8 @@ husarion:
   ros_ws_abspath: /data/catkin_ws
 
   # Maps obtained with SLAM
-  map_yaml_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_one_object_2_map.yaml
-  map_pgm_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_one_object_2_map.pgm
+  map_yaml_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_sink.yaml
+  map_pgm_abspath: /data/catkin_ws/src/drl_navigation/maps/training_env_sink.pgm
 
   robot_model_name: rosbot
 
@@ -18,8 +18,6 @@ husarion:
   new_ranges: 8 # How many laser readings we jump in each observation reading, the bigger the less laser resolution
   max_laser_value: 10.0  # Value considered Ok, no wall
   min_laser_value: 0.2 # Value considered if there is an obstacle or crashed
-  lower_angle: -1.57
-  upper_angle: 1.57
 
   work_space: # 2D cube in which Husarion Cant surpass.
     x_max: 5.0

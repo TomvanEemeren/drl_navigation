@@ -1,10 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <launch>
+
+    <arg name="world" default="empty" />
+
     <!-- This version uses the openai_ros environments -->
     <rosparam command="load" file="$(find drl_navigation)/config/stb3_training_params.yaml" />
     <rosparam command="load" file="$(find drl_navigation)/config/environment_params.yaml" />
     <!-- Launch the training system -->
     <node pkg="drl_navigation" name="rosbot_drl_navigation" type="train_stb3.py" output="screen" />
 
-    <include file="$(find drl_navigation)/launch/amcl.launch" /> 
+    <include file="$(find drl_navigation)/launch/amcl.launch">
+        <arg name="world" value="$(arg world)" />
+    </include> 
 </launch>
