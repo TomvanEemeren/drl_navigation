@@ -13,6 +13,7 @@ from openai_ros.task_envs.task_commons import LoadYamlFileParamsTest
 from openai_ros.openai_ros_common import ROSLauncher
 from goal_ros_wrapper import RandomGoalROSWrapper
 from reward_function import RewardFunction
+from drl_navigation.msg import Result
 import os
 import math
 
@@ -126,6 +127,9 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
 
         self.laser_filtered_pub = rospy.Publisher(
             '/rosbot/laser/scan_filtered', LaserScan, queue_size=1)
+        
+        self.result_pub = rospy.Publisher('/result', Result, queue_size=1)
+        self.result = Result()
 
     def _set_init_pose(self):
         """Sets the Robot in its init pose
@@ -315,14 +319,20 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
 
             if reached_des_pos:
                 reward = self.reward_function.get_termination_reward(goal_reached=True)
+                self.result.successes += 1
+                self.result_pub.publish(self.result)
                 rospy.logwarn(
                     "GOT TO DESIRED POINT ; DONE, reward=" + str(reward))
             elif self.check_husarion_has_crashed(laser_readings):
                 reward = self.reward_function.get_termination_reward(goal_reached=False)
+                self.result.crashes += 1
+                self.result_pub.publish(self.result)
                 rospy.logerr(
                     "HUSARION HAS CRASHED ; DONE, reward=" + str(reward))
             else:
                 reward = 0
+                self.result.timeouts += 1
+                self.result_pub.publish(self.result)
                 rospy.logerr(
                     "SOMETHING WENT WRONG ; DONE, reward=" + str(reward))
         

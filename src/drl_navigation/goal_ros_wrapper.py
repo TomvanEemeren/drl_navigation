@@ -16,7 +16,7 @@ class RandomGoalROSWrapper:
 
         self.random_goal = GenerateRandomGoal(self.map_yaml_path, self.map_pgm_path)
         
-        self.goal_pub = rospy.Publisher("/random_goal", PointStamped, queue_size=10)
+        self.goal_pub = rospy.Publisher("/random_goal", PointStamped, queue_size=1)
 
     def get_random_coordinates(self):
         random_coordinate = \
