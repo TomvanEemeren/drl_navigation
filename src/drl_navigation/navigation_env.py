@@ -11,7 +11,7 @@ from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Header
 from openai_ros.task_envs.task_commons import LoadYamlFileParamsTest
 from openai_ros.openai_ros_common import ROSLauncher
-from generate_goal import GenerateRandomGoal
+from goal_ros_wrapper import RandomGoalROSWrapper
 from reward_function import RewardFunction
 import os
 import math
@@ -59,20 +59,14 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         self.work_space_x_min = rospy.get_param("/husarion/work_space/x_min")
         self.work_space_y_max = rospy.get_param("/husarion/work_space/y_max")
         self.work_space_y_min = rospy.get_param("/husarion/work_space/y_min")
-        self.min_goal_x = rospy.get_param("/husarion/min_goal_x", default=None)
 
         # Get a random goal
-        self.map_yaml_path = rospy.get_param("/husarion/map_yaml_abspath")
-        self.map_pgm_path = rospy.get_param("/husarion/map_pgm_abspath")
-        self.random_goal = GenerateRandomGoal(self.map_yaml_path, self.map_pgm_path)
-
         self.start_x, self.start_y, self.start_yaw = (0.0, 0.0, 0.0)
+        self.random_goal = RandomGoalROSWrapper(self.start_x, self.start_y)
 
         self.desired_position = Point()
         self.desired_position.x, self.desired_position.y = \
-            self.random_goal.generate_random_coordinate(min_distance=0.4, 
-                                                        invalid_coordinates=[(self.start_x, self.start_y)],
-                                                        min_x=self.min_goal_x)
+            self.random_goal.get_random_coordinates()
         self.desired_position.z = 0.0
 
         self.precision_epsilon = rospy.get_param('/husarion/precision_epsilon')
@@ -165,9 +159,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
 
         new_position = Point()
         new_position.x, new_position.y = \
-            self.random_goal.generate_random_coordinate(min_distance=0.4, 
-                                                        invalid_coordinates=[(self.start_x, self.start_y)],
-                                                        min_x=self.min_goal_x)
+            self.random_goal.get_random_coordinates()
         self.update_desired_pos(new_position)
 
         global_pose = self.get_pose()
