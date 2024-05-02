@@ -30,7 +30,7 @@ def train(env, timesteps, log_dir, model_dir, model_name, stb3_algo="SAC", batch
         iters += 1
         model.learn(total_timesteps=timesteps, reset_num_timesteps=False, 
                     tb_log_name=model_name)
-        model.save(f"{model_dir}/{model_name}/{stb3_algo}_{timesteps*iters}")
+        model.save(f"{model_dir}/{stb3_algo}_{timesteps*iters}")
 
 def main():
     rospy.init_node('drl_node', anonymous=True, log_level=rospy.INFO)
@@ -43,12 +43,13 @@ def main():
     training_env = rospy.get_param("/training_env")
 
     # Set the logging system
+    model_name = rospy.get_param("/training/model_name")
     rospack = rospkg.RosPack()
     pkg_path = rospack.get_path('drl_navigation')
-    model_dir = pkg_path + "/models/" + training_env
+    model_dir = pkg_path + "/models/" + training_env + "/" + model_name
     log_dir = pkg_path + "/logs/" + training_env
-    os.makedirs(model_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(model_dir, exist_ok=True)
 
     # # Loads parameters from the ROS param server
     # # Parameters are stored in a yaml file inside the config directory
@@ -56,7 +57,6 @@ def main():
     timesteps = rospy.get_param("/training/timesteps")
     stb3_algo = rospy.get_param("/training/algorithm")
     batch_size = rospy.get_param("/training/batch_size")
-    model_name = rospy.get_param("/training/model_name")
 
     continue_training = rospy.get_param("/training/continue_training", default=False)
     model_path = rospy.get_param("/training/model_path", default=None)
