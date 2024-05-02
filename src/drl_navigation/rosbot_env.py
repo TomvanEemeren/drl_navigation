@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import numpy
 import rospy
 from openai_ros import robot_gazebo_env

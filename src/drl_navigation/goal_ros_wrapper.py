@@ -3,7 +3,7 @@
 import rospy
 from std_msgs.msg import Header
 from geometry_msgs.msg import PointStamped
-from generate_goal import GenerateRandomGoal
+from drl_navigation.generate_goal import GenerateRandomGoal
 
 class RandomGoalROSWrapper:
     def __init__(self, start_x, start_y):

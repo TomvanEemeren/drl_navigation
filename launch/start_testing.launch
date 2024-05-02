@@ -30,7 +30,7 @@
     </rosparam>
 
     <!-- Launch the training system -->
-    <node pkg="drl_navigation" name="rosbot_drl_navigation" type="test_stb3.py" output="screen" />
+    <node pkg="drl_navigation" name="rosbot_drl_navigation" type="test_stb3" output="screen" />
 
     <include file="$(find drl_navigation)/launch/amcl.launch">
         <arg name="env_name" value="$(arg env_name)" />

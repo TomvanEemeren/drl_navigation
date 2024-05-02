@@ -11,8 +11,8 @@ from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Header
 from openai_ros.task_envs.task_commons import LoadYamlFileParamsTest
 from openai_ros.openai_ros_common import ROSLauncher
-from goal_ros_wrapper import RandomGoalROSWrapper
-from reward_function import RewardFunction
+from drl_navigation.goal_ros_wrapper import RandomGoalROSWrapper
+from drl_navigation.reward_function import RewardFunction
 from drl_navigation.msg import Result
 import os
 import math

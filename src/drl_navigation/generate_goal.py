@@ -136,22 +136,21 @@ class GenerateRandomGoal:
         if goal_x is not None and goal_y is not None:
             plt.plot(goal_x, goal_y, 'o', color='orange')
             plt.title('Obstacle map with random goal')
-        else:
-            plt.title('Obstacle map')
 
-        plt.xlabel('X (meters)')
-        plt.ylabel('Y (meters)')
+        plt.xlabel('$x$ [m]', fontsize=15)  
+        plt.ylabel('$y$ [m]', fontsize=15)  
+        plt.xticks(fontsize=15)  
+        plt.yticks(fontsize=15) 
         plt.grid(True)
         plt.show()
 
 if __name__ == '__main__':
-    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_one_object_2_map.yaml"
-    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_one_object_2_map.pgm"
+    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_c_shape.yaml"
+    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_c_shape.png"
 
     random_goal = GenerateRandomGoal(map_yaml_path, map_pgm_path)
     start_x, start_y = random_goal.generate_random_coordinate(min_distance=0.4)
     goal_x, goal_y = random_goal.generate_random_coordinate(min_distance=0.4, 
                                                             invalid_coordinates=[(start_x, start_y)],
                                                             min_x=None)
-    print("Random goal:", goal_x, goal_y, "Random start:", start_x, start_y)
     random_goal.plot_map(goal_x, goal_y, start_x, start_y)

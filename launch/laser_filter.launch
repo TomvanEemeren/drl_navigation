@@ -1,4 +1,4 @@
 <launch>
-  <node pkg="drl_navigation" type="laser_filter.py" name="laser_filter" output="screen" />
+  <node pkg="drl_navigation" type="laser_filter" name="laser_filter" output="screen" />
   <rosparam command="load" file="$(find drl_navigation)/config/laser_config.yaml" />
 </launch>

@@ -38,7 +38,7 @@
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find drl_navigation)/rviz/stb3_config.rviz" />
 
   <rosparam command="load" file="$(find drl_navigation)/config/common_params.yaml" />
-  <node pkg="drl_navigation" type="pose_publisher.py" name="pose_publisher" output="screen" />
+  <node pkg="drl_navigation" type="pose_publisher" name="pose_publisher" output="screen" />
 
   <include file="$(find drl_navigation)/launch/laser_filter.launch" />
 
