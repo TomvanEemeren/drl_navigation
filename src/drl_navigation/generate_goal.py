@@ -85,12 +85,21 @@ class GenerateRandomGoal:
         for row in range(self.height - 1, -1, -1): 
             for col in range(self.width):
                 pixel_value = self.occupancy_data[row * self.width + col]
-                if pixel_value < lo_threshold:
-                    occupied_coordinates.append((col * self.resolution + origin_x, 
+                if isinstance(pixel_value, tuple):
+                    rgb_values = pixel_value[:3]
+                    if any(value < lo_threshold for value in rgb_values):
+                        occupied_coordinates.append((col * self.resolution + origin_x, 
+                                                    (self.height - row - 1) * self.resolution + origin_y))
+                    elif all(value > hi_threshold for value in rgb_values):
+                        valid_coordinates.append((col * self.resolution + origin_x, 
                                                 (self.height - row - 1) * self.resolution + origin_y))
-                elif pixel_value > hi_threshold:
-                    valid_coordinates.append((col * self.resolution + origin_x, 
-                                            (self.height - row - 1) * self.resolution + origin_y))
+                else:
+                    if pixel_value < lo_threshold:
+                        occupied_coordinates.append((col * self.resolution + origin_x, 
+                                                    (self.height - row - 1) * self.resolution + origin_y))
+                    elif pixel_value > hi_threshold:
+                        valid_coordinates.append((col * self.resolution + origin_x, 
+                                                (self.height - row - 1) * self.resolution + origin_y))
 
         return occupied_coordinates, valid_coordinates
     
@@ -145,8 +154,8 @@ class GenerateRandomGoal:
         plt.show()
 
 if __name__ == '__main__':
-    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_c_shape.yaml"
-    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_c_shape.png"
+    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.yaml"
+    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.png"
 
     random_goal = GenerateRandomGoal(map_yaml_path, map_pgm_path)
     start_x, start_y = random_goal.generate_random_coordinate(min_distance=0.4)
