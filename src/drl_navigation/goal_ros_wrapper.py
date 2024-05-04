@@ -18,6 +18,10 @@ class RandomGoalROSWrapper:
         
         self.goal_pub = rospy.Publisher("/random_goal", PointStamped, queue_size=1)
 
+    def get_costmap(self):
+        map_image = self.random_goal.opencv_image.astype('uint8')
+        return map_image, self.random_goal.width, self.random_goal.height
+
     def get_random_coordinates(self):
         random_coordinate = \
             self.random_goal.generate_random_coordinate(min_distance=0.4, 

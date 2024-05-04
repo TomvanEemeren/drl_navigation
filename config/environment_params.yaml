@@ -21,6 +21,8 @@ husarion:
     y_max: 5.0
     y_min: -5.0
 
+  use_semantics: false
+
   # min_goal_x: 2.0
 
   precision_epsilon: 0.2 # How close we need to be to the desired point to consider it reached

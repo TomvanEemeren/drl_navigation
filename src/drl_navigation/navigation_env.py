@@ -61,6 +61,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         self.work_space_y_max = rospy.get_param("/husarion/work_space/y_max")
         self.work_space_y_min = rospy.get_param("/husarion/work_space/y_min")
 
+        self.use_semantic_map = rospy.get_param("/husarion/use_semantics")
+
         # Get a random goal
         self.start_x, self.start_y, self.start_yaw = (0.0, 0.0, 0.0)
         self.random_goal = RandomGoalROSWrapper(self.start_x, self.start_y)
@@ -100,15 +102,29 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         low_heading = np.array([-3.14])
         high_heading = np.array([3.14])
 
-        self.observation_space = spaces.Dict({
-                                    "laser_scan": spaces.Box(low=low_laser,high=high_laser, dtype=np.float32),
-                                    "relative_pose": spaces.Box(low=low_pose, high=high_pose, dtype=np.float32),
-                                    "heading": spaces.Box(low=low_heading, high=high_heading, dtype=np.float32),
-                                    "previous_velocity": spaces.Box(low=np.array([0.0, -self.max_angular_speed]), 
-                                                                    high=np.array([self.max_linear_speed, self.max_angular_speed]), 
-                                                                    dtype=np.float32),
-                                })
-        
+        if self.use_semantic_map:
+            self.map_image, width, height = self.random_goal.get_costmap()
+
+            self.observation_space = spaces.Dict({
+                                        "laser_scan": spaces.Box(low=low_laser,high=high_laser, dtype=np.float32),
+                                        "relative_pose": spaces.Box(low=low_pose, high=high_pose, dtype=np.float32),
+                                        "heading": spaces.Box(low=low_heading, high=high_heading, dtype=np.float32),
+                                        "previous_velocity": spaces.Box(low=np.array([0.0, -self.max_angular_speed]), 
+                                                                        high=np.array([self.max_linear_speed, self.max_angular_speed]), 
+                                                                        dtype=np.float32),
+                                        "costmap": spaces.Box(low=0, high=255, shape=(width, height, 3), dtype=np.uint8),
+                                    })
+        else:
+            self.observation_space = spaces.Dict({
+                                        "laser_scan": spaces.Box(low=low_laser,high=high_laser, dtype=np.float32),
+                                        "relative_pose": spaces.Box(low=low_pose, high=high_pose, dtype=np.float32),
+                                        "heading": spaces.Box(low=low_heading, high=high_heading, dtype=np.float32),
+                                        "previous_velocity": spaces.Box(low=np.array([0.0, -self.max_angular_speed]), 
+                                                                        high=np.array([self.max_linear_speed, self.max_angular_speed]), 
+                                                                        dtype=np.float32),
+                                    })
+        rospy.logwarn("Observation Space: " + str(self.observation_space))
+
         # Action space
         self.action_space = spaces.Box(
             low=np.array([0.0, -self.max_angular_speed]),
@@ -217,13 +233,23 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         normalised_heading = round(self.normalize_angle(heading), 2)
 
         # We concatenate all the lists.
-        observations = {
-            "laser_scan": np.array(discretized_laser_scan, dtype=np.float32),
-            "relative_pose": np.array([delta_x, delta_y], dtype=np.float32),
-            "heading": np.array([normalised_heading], dtype=np.float32),
-            "previous_velocity": np.array([round(self.linear_speed, 2), 
-                                  round(self.angular_speed, 2)], dtype=np.float32)
-        }
+        if self.use_semantic_map:
+            observations = {
+                "laser_scan": np.array(discretized_laser_scan, dtype=np.float32),
+                "relative_pose": np.array([delta_x, delta_y], dtype=np.float32),
+                "heading": np.array([normalised_heading], dtype=np.float32),
+                "previous_velocity": np.array([round(self.linear_speed, 2), 
+                                    round(self.angular_speed, 2)], dtype=np.float32),
+                "costmap": self.map_image
+            }
+        else:
+            observations = {
+                "laser_scan": np.array(discretized_laser_scan, dtype=np.float32),
+                "relative_pose": np.array([delta_x, delta_y], dtype=np.float32),
+                "heading": np.array([normalised_heading], dtype=np.float32),
+                "previous_velocity": np.array([round(self.linear_speed, 2), 
+                                    round(self.angular_speed, 2)], dtype=np.float32),
+            }
 
         rospy.logwarn("delta_x: " + str(delta_x))
         rospy.logwarn("delta_y: " + str(delta_y))

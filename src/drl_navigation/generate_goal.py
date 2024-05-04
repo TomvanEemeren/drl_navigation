@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
+import cv2
 import yaml
 import math
 import random
+import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 
@@ -39,6 +41,8 @@ class GenerateRandomGoal:
         
         self.occupied_coordinates, self.valid_coordinates = \
             self.get_filtered_coordinates()
+
+        self.contour_info, self.opencv_image = self.get_contours(visualise=visualise)
 
         if visualise:
             self.plot_map()
@@ -129,12 +133,75 @@ class GenerateRandomGoal:
                     continue
                 return random_x, random_y
 
+    def get_contours(self, visualise=False):
+        """
+        Returns the contours of red obstacles on the map.
+
+        Args:
+            visualise (bool): Flag indicating whether to visualize the map.
+
+        Returns:
+            list: A list of contour information.
+        """
+        opencv_image = np.array(self.map_image.convert('RGB'))
+        brg_image = cv2.cvtColor(opencv_image, cv2.COLOR_RGB2BGR)
+        
+        lower_red = np.array([0, 0, 100])
+        upper_red = np.array([50, 500, 255])
+
+        mask = cv2.inRange(brg_image, lower_red, upper_red)
+        contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        contour_info = []
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            contour_info.append({
+                'contour': contour,
+                'x': x,
+                'y': y,
+                'width': w,
+                'height': h
+            })
+
+        if visualise:
+            cv2.drawContours(brg_image, contours, -1, (255, 0, 0), 1)
+            plt.figure(figsize=(self.width * self.resolution, self.height * self.resolution))
+            plt.imshow(brg_image, origin='upper', 
+               extent=[self.origin[0], self.origin[0] + self.width * self.resolution, 
+                   self.origin[1], self.origin[1] + self.height * self.resolution])
+            plt.xlabel('$x$ [m]')  
+            plt.ylabel('$y$ [m]') 
+            plt.grid(True)
+            plt.show()
+
+        return contour_info, brg_image
+    
+    def draw_bounding_boxes(self, visualise=False):
+        for contour in self.contour_info:
+            x, y, w, h = contour['x'], contour['y'], contour['width'], contour['height']
+            if w <= h:
+                points = np.array([[x - h, y], [x + w - 1, y], [x + w - 1, y + h - 1], 
+                                   [x - h, y + h - 1]], dtype=np.int32)
+                cv2.fillPoly(self.opencv_image, pts=[points], color=(0, 255, 0))
+            elif w > h:
+                cv2.rectangle(self.opencv_image, (x, y - w), (x + w - 1, y + h - 1), (0, 0, 255), 1)
+
+        if visualise:
+            plt.figure(figsize=(self.width * self.resolution, self.height * self.resolution))
+            plt.imshow(self.opencv_image, origin='upper', 
+               extent=[self.origin[0], self.origin[0] + self.width * self.resolution, 
+                   self.origin[1], self.origin[1] + self.height * self.resolution])
+            plt.xlabel('$x$ [m]')  
+            plt.ylabel('$y$ [m]') 
+            plt.grid(True)
+            plt.show()
+
     def plot_map(self, goal_x=None, goal_y=None, start_x=None, start_y=None):
         """
         Plots the map with occupied coordinates.
         """
         plt.figure(figsize=(self.width * self.resolution, self.height * self.resolution))
-        plt.imshow(self.map_image, cmap='gray', origin='upper', 
+        plt.imshow(self.map_image, origin='upper', 
                extent=[self.origin[0], self.origin[0] + self.width * self.resolution, 
                    self.origin[1], self.origin[1] + self.height * self.resolution])
 
@@ -154,12 +221,11 @@ class GenerateRandomGoal:
         plt.show()
 
 if __name__ == '__main__':
-    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.yaml"
-    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.png"
+    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_one_object.yaml"
+    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_one_object.pgm"
 
     random_goal = GenerateRandomGoal(map_yaml_path, map_pgm_path)
     start_x, start_y = random_goal.generate_random_coordinate(min_distance=0.4)
     goal_x, goal_y = random_goal.generate_random_coordinate(min_distance=0.4, 
                                                             invalid_coordinates=[(start_x, start_y)],
                                                             min_x=None)
-    random_goal.plot_map(goal_x, goal_y, start_x, start_y)

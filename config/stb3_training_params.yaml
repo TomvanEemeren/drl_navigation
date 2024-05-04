@@ -2,6 +2,7 @@ training:
   timesteps: 10000
   algorithm: SAC
   batch_size: 1024
+  buffer_size: 1000000
   model_name: SAC
   
   continue_training: False
