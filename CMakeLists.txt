@@ -165,6 +165,7 @@ catkin_install_python(PROGRAMS
   scripts/test_node
   scripts/test_stb3
   scripts/train_stb3
+  scripts/init_pose
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

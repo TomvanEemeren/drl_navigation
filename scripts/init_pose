@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+import rospy
+from geometry_msgs.msg import PoseWithCovarianceStamped
+from std_msgs.msg import Header
+
+class InitPosePub():
+    def __init__(self):
+        rospy.init_node('init_pose_pub')
+        self.pub = rospy.Publisher('/initialpose', PoseWithCovarianceStamped, queue_size=10)
+
+    def publish(self):
+        initial_pose = PoseWithCovarianceStamped()
+        initial_pose.header = Header()
+        initial_pose.header.stamp = rospy.Time.now()
+        initial_pose.header.frame_id = "map"
+        initial_pose.pose.pose.position.x = 1.0
+        initial_pose.pose.pose.position.y = 1.0
+        initial_pose.pose.pose.position.z = 0.0
+        initial_pose.pose.pose.orientation.x = 0.0
+        initial_pose.pose.pose.orientation.y = 0.0
+        initial_pose.pose.pose.orientation.z = 0.0
+        initial_pose.pose.pose.orientation.w = 1.0
+
+        self.pub.publish(initial_pose)
+
+    def run(self):
+        rate = rospy.Rate(1)
+        while not rospy.is_shutdown():
+            self.publish()
+            rate.sleep()
+
+if __name__ == '__main__':
+    try:
+        init_pose_pub = InitPosePub()
+        init_pose_pub.run()
+    except rospy.ROSInterruptException:
+        pass
