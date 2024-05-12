@@ -66,7 +66,6 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         # Get a random goal
         self.start_x, self.start_y, self.start_yaw = (0.0, 0.0, 0.0)
         self.random_goal = RandomGoalROSWrapper(self.start_x, self.start_y)
-
         self.desired_position = Point()
         self.desired_position.x, self.desired_position.y = \
             self.random_goal.get_random_coordinates()
@@ -103,8 +102,9 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         high_heading = np.array([3.14])
 
         if self.use_semantic_map:
-            self.map_image, width, height = self.random_goal.get_costmap()
-
+            self.map_image, width, height = self.random_goal.get_costmap(self.start_x, self.start_y, self.start_yaw)
+            low_image = np.full((width, height), 0)
+            high_image = np.full((width, height), 255)
             self.observation_space = spaces.Dict({
                                         "laser_scan": spaces.Box(low=low_laser,high=high_laser, dtype=np.float32),
                                         "relative_pose": spaces.Box(low=low_pose, high=high_pose, dtype=np.float32),
@@ -112,7 +112,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                                         "previous_velocity": spaces.Box(low=np.array([0.0, -self.max_angular_speed]), 
                                                                         high=np.array([self.max_linear_speed, self.max_angular_speed]), 
                                                                         dtype=np.float32),
-                                        "costmap": spaces.Box(low=0, high=255, shape=(width, height, 3), dtype=np.uint8),
+                                        "costmap": spaces.Box(low=low_image, high=high_image, 
+                                                              shape=(width, height), dtype=np.uint8),
                                     })
         else:
             self.observation_space = spaces.Dict({
@@ -123,6 +124,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                                                                         high=np.array([self.max_linear_speed, self.max_angular_speed]), 
                                                                         dtype=np.float32),
                                     })
+        
         rospy.logwarn("Observation Space: " + str(self.observation_space))
 
         # Action space
@@ -166,7 +168,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         of an episode.
         :return:
         """
-        # self.set_initial_pose([self.start_x, self.start_y, self.start_yaw])
+        #self.set_initial_pose([self.start_x, self.start_y, self.start_yaw])
         self.reset_amcl_initial_pose([self.start_x, self.start_y, self.start_yaw])
 
         # For Info Purposes
@@ -234,6 +236,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
 
         # We concatenate all the lists.
         if self.use_semantic_map:
+            self.map_image, _, _ = self.random_goal.get_costmap(x_position, y_position, yaw)
             observations = {
                 "laser_scan": np.array(discretized_laser_scan, dtype=np.float32),
                 "relative_pose": np.array([delta_x, delta_y], dtype=np.float32),
@@ -250,7 +253,6 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                 "previous_velocity": np.array([round(self.linear_speed, 2), 
                                     round(self.angular_speed, 2)], dtype=np.float32),
             }
-
         rospy.logwarn("delta_x: " + str(delta_x))
         rospy.logwarn("delta_y: " + str(delta_y))
         rospy.logwarn("normalised_heading: " + str(normalised_heading))

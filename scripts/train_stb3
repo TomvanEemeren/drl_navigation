@@ -12,19 +12,24 @@ from stable_baselines3 import SAC
 
 # import our training environment
 from drl_navigation.env_utils import Start_Environment
+from drl_navigation.feature_extractor import CustomCombinedExtractor
 
 def train(env, timesteps, log_dir, model_dir, model_name, stb3_algo="SAC", batch_size=1024, 
           buffer_size=1000000, continue_training=False, model_path=None):
     
+    policy_kwargs = dict(
+        features_extractor_class=CustomCombinedExtractor,
+    )
+    
     if stb3_algo == "SAC":
         if continue_training:
-                model = SAC.load(model_path, env, batch_size=batch_size, tensorboard_log=log_dir)
+            model = SAC.load(model_path, env, batch_size=batch_size, tensorboard_log=log_dir)
         else:
-            model = SAC("MultiInputPolicy", env, batch_size=batch_size, 
+            model = SAC("MultiInputPolicy", env, batch_size=batch_size, policy_kwargs=policy_kwargs,
                         verbose=1, device="cuda", tensorboard_log=log_dir, buffer_size=buffer_size)
     else:
         raise ValueError("Invalid stb3_algo value. Supported values are SAC and PPO.")
-
+    rospy.logwarn(model.policy)
     iters = 0
     while True:
         iters += 1

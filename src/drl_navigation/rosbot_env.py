@@ -2,6 +2,7 @@
 
 import numpy
 import rospy
+from std_msgs.msg import Header
 from openai_ros import robot_gazebo_env
 from std_msgs.msg import Float64
 from sensor_msgs.msg import JointState
@@ -421,6 +422,7 @@ class RosbotEnv(robot_gazebo_env.RobotGazeboEnv):
         initial_pose_msg = PoseWithCovarianceStamped()
 
         # Fill in the header of the message
+        initial_pose_msg.header = Header()
         initial_pose_msg.header.stamp = rospy.Time.now()
         initial_pose_msg.header.frame_id = "map"  # Set the frame ID to "map"
 

@@ -4,6 +4,7 @@ import cv2
 import yaml
 import math
 import random
+import time
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -43,6 +44,7 @@ class GenerateRandomGoal:
             self.get_filtered_coordinates()
 
         self.contour_info, self.opencv_image = self.get_contours(visualise=visualise)
+        self.draw_bounding_boxes(visualise=visualise)
 
         if visualise:
             self.plot_map()
@@ -144,12 +146,12 @@ class GenerateRandomGoal:
             list: A list of contour information.
         """
         opencv_image = np.array(self.map_image.convert('RGB'))
-        brg_image = cv2.cvtColor(opencv_image, cv2.COLOR_RGB2BGR)
+        bgr_image = cv2.cvtColor(opencv_image, cv2.COLOR_RGB2BGR)
         
         lower_red = np.array([0, 0, 100])
         upper_red = np.array([50, 500, 255])
 
-        mask = cv2.inRange(brg_image, lower_red, upper_red)
+        mask = cv2.inRange(bgr_image, lower_red, upper_red)
         contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         contour_info = []
@@ -163,47 +165,142 @@ class GenerateRandomGoal:
                 'height': h
             })
 
+        gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY) 
+
         if visualise:
-            cv2.drawContours(brg_image, contours, -1, (255, 0, 0), 1)
-            plt.figure(figsize=(self.width * self.resolution, self.height * self.resolution))
-            plt.imshow(brg_image, origin='upper', 
-               extent=[self.origin[0], self.origin[0] + self.width * self.resolution, 
-                   self.origin[1], self.origin[1] + self.height * self.resolution])
+            cv2.drawContours(gray_image, contours, -1, 0, 1)
+            self.create_figure(gray_image, self.resolution, 
+                               self.origin, self.width, self.height)
             plt.xlabel('$x$ [m]')  
             plt.ylabel('$y$ [m]') 
-            plt.grid(True)
             plt.show()
 
-        return contour_info, brg_image
+        return contour_info, gray_image
     
     def draw_bounding_boxes(self, visualise=False):
+        """
+        Draws bounding boxes around the red obstacles on the map.
+
+        Args:
+            visualise (bool): Flag indicating whether to visualize the map.
+        """
         for contour in self.contour_info:
             x, y, w, h = contour['x'], contour['y'], contour['width'], contour['height']
             if w <= h:
-                points = np.array([[x - h, y], [x + w - 1, y], [x + w - 1, y + h - 1], 
+                # Draw left box
+                points = np.array([[x - h, y], [x - 1, y], [x - 1, y + h - 1], 
                                    [x - h, y + h - 1]], dtype=np.int32)
-                cv2.fillPoly(self.opencv_image, pts=[points], color=(0, 255, 0))
+                cv2.fillPoly(self.opencv_image, pts=[points], color=150)
             elif w > h:
-                cv2.rectangle(self.opencv_image, (x, y - w), (x + w - 1, y + h - 1), (0, 0, 255), 1)
+                # Draw top box
+                points = np.array([[x, y - w], [x, y - 1], [x + w - 1, y - 1],
+                                   [x + w - 1, y - w]], dtype=np.int32)
+                cv2.fillPoly(self.opencv_image, pts=[points], color=150)
 
         if visualise:
-            plt.figure(figsize=(self.width * self.resolution, self.height * self.resolution))
-            plt.imshow(self.opencv_image, origin='upper', 
-               extent=[self.origin[0], self.origin[0] + self.width * self.resolution, 
-                   self.origin[1], self.origin[1] + self.height * self.resolution])
+            self.create_figure(self.opencv_image, self.resolution, 
+                               self.origin, self.width, self.height)
             plt.xlabel('$x$ [m]')  
             plt.ylabel('$y$ [m]') 
-            plt.grid(True)
             plt.show()
+
+    def create_costmap(self, x, y, angle, size=(3,3), visualise=False):
+        """
+        Creates a costmap based on the given parameters.
+
+        Args:
+            x (float): The x-coordinate of the center of the costmap.
+            y (float): The y-coordinate of the center of the costmap.
+            angle (float): The angle (in radians) to rotate the costmap.
+            size (tuple, optional): The size of the costmap in meters (width, height). Defaults to (3, 3).
+            visualise (bool, optional): Whether to visualize the costmap. Defaults to False.
+
+        Returns:
+            numpy.ndarray: The local costmap image.
+
+        """
+        pixel_x = int((x - self.origin[0]) / self.resolution)
+        pixel_y = self.height - int((y - self.origin[1]) / self.resolution)
+        size_x = int(size[0] / self.resolution)
+        size_y = int(size[1] / self.resolution)
+
+        if visualise:
+            cv2.circle(self.opencv_image, (pixel_x, pixel_y), radius=1, color=0, thickness=-1)
+            self.create_figure(self.opencv_image, self.resolution,
+                self.origin, self.opencv_image.shape[1], self.opencv_image.shape[0])
+            plt.show()
+
+        translated_image, new_center = self.translate_image(self.opencv_image, pixel_x, pixel_y)
+        
+        min_x = max(0, new_center[0] - size_x // 2)
+        max_x = min(translated_image.shape[0], (new_center[0] + size_x // 2) + 1)
+        min_y = max(0, new_center[1] - size_y // 2)
+        max_y = min(translated_image.shape[1], (new_center[1] + size_y // 2) + 1)
+
+        rotated_image = self.rotate_image(translated_image, angle)
+        cropped_image = rotated_image[int(min_y):int(max_y), int(min_x):int(max_x)]
+
+        if visualise:
+            self.create_figure(cropped_image, self.resolution,
+                self.origin, cropped_image.shape[1], cropped_image.shape[0])
+            plt.show()
+
+        width = cropped_image.shape[1]
+        height = cropped_image.shape[0]
+
+        return cropped_image, width, height
+    
+    def translate_image(self, image, x, y):
+        """
+        Translates the image so that the specified point (x, y) becomes the center.
+
+        Args:
+            image (np.array): Image to be translated.
+            x (int): x-coordinate of the center point.
+            y (int): y-coordinate of the center point.
+
+        Returns:
+            np.array: Translated image.
+        """
+        center = tuple(np.array(image.shape[1::-1]) / 2)
+        tx = -(x - center[0])
+        ty = -(y - center[1])
+        translation_matrix = np.float32([[1, 0, tx], [0, 1, ty]])
+        translated_image = cv2.warpAffine(image, translation_matrix, image.shape[1::-1], flags=cv2.INTER_LINEAR,
+                                            borderMode=cv2.BORDER_CONSTANT, borderValue=220)
+        new_center = tuple(np.array(translated_image.shape[1::-1]) / 2)
+        return translated_image, new_center
+    
+    def rotate_image(self, image, angle):
+        """
+        Rotates the image by a specified angle.
+
+        Args:
+            image (np.array): Image to be rotated.
+            angle (float): Angle of rotation.
+
+        Returns:
+            np.array: Rotated image.
+        """
+        center = tuple(np.array(image.shape[1::-1]) / 2)
+        rot_mat = cv2.getRotationMatrix2D(center, -angle, 1.0)
+        rotated_image = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR,
+                                        borderMode=cv2.BORDER_CONSTANT, borderValue=220)
+        return rotated_image
+
+    def create_figure(self, image, resolution, origin, width, height):
+        plt.figure(figsize=(width * resolution, height * resolution))
+        plt.imshow(image, origin='upper', cmap="gray",
+            extent=[origin[0], origin[0] + width * resolution, 
+                origin[1], origin[1] + height * resolution])
+        plt.grid(True)
 
     def plot_map(self, goal_x=None, goal_y=None, start_x=None, start_y=None):
         """
         Plots the map with occupied coordinates.
         """
-        plt.figure(figsize=(self.width * self.resolution, self.height * self.resolution))
-        plt.imshow(self.map_image, origin='upper', 
-               extent=[self.origin[0], self.origin[0] + self.width * self.resolution, 
-                   self.origin[1], self.origin[1] + self.height * self.resolution])
+        self.create_figure(self.map_image, self.resolution, 
+                           self.origin, self.width, self.height)
 
         if start_x is not None and start_y is not None:
             plt.plot(start_x, start_y, 'o', color='blue')
@@ -217,15 +314,18 @@ class GenerateRandomGoal:
         plt.ylabel('$y$ [m]', fontsize=15)  
         plt.xticks(fontsize=15)  
         plt.yticks(fontsize=15) 
-        plt.grid(True)
         plt.show()
 
 if __name__ == '__main__':
-    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_one_object.yaml"
-    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/training_env_one_object.pgm"
-
+    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.yaml"
+    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.png"
+    start_time = time.time()
     random_goal = GenerateRandomGoal(map_yaml_path, map_pgm_path)
     start_x, start_y = random_goal.generate_random_coordinate(min_distance=0.4)
     goal_x, goal_y = random_goal.generate_random_coordinate(min_distance=0.4, 
                                                             invalid_coordinates=[(start_x, start_y)],
                                                             min_x=None)
+    image, width, height = random_goal.create_costmap(-1, -1, 0, size=(3, 3), visualise=True)
+    difference = time.time() - start_time
+    print(f"Width: {width}, Height: {height}")
+    print(f"Time taken: {difference:.2f} seconds")
