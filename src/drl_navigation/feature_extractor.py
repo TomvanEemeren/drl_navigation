@@ -14,11 +14,18 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
         total_concat_size = 0
         for key, subspace in observation_space.spaces.items():
             if key == "costmap":
+                n_convW1 = ((subspace.shape[1] - 4) // 2 + 1) // 4
+                n_convH1 = ((subspace.shape[2] - 4) // 2 + 1) // 4
+                n_flatten = n_convW1 * n_convH1 * 4
                 extractors[key] = nn.Sequential(
-                    nn.AvgPool2d(5), 
-                    nn.Flatten()
+                    nn.Conv2d(subspace.shape[0], 4, kernel_size=4, stride=2, padding=0),
+                    nn.ReLU(),
+                    nn.MaxPool2d(4),
+                    nn.Flatten(),
                 )
-                total_concat_size += (subspace.shape[0] // 5) * (subspace.shape[1] // 5)
+
+                total_concat_size += n_flatten
+
             else:
                 extractors[key] = nn.Flatten()
                 total_concat_size += subspace.shape[0]

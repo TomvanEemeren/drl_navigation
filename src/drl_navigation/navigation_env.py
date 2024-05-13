@@ -103,8 +103,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
 
         if self.use_semantic_map:
             self.map_image, width, height = self.random_goal.get_costmap(self.start_x, self.start_y, self.start_yaw)
-            low_image = np.full((width, height), 0)
-            high_image = np.full((width, height), 255)
+            low_image = np.zeros((1, width, height), dtype=np.uint8)
+            high_image = np.full((1, width, height), 255, dtype=np.uint8)
             self.observation_space = spaces.Dict({
                                         "laser_scan": spaces.Box(low=low_laser,high=high_laser, dtype=np.float32),
                                         "relative_pose": spaces.Box(low=low_pose, high=high_pose, dtype=np.float32),
@@ -113,7 +113,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                                                                         high=np.array([self.max_linear_speed, self.max_angular_speed]), 
                                                                         dtype=np.float32),
                                         "costmap": spaces.Box(low=low_image, high=high_image, 
-                                                              shape=(width, height), dtype=np.uint8),
+                                                              shape=(1, width, height), dtype=np.uint8),
                                     })
         else:
             self.observation_space = spaces.Dict({
