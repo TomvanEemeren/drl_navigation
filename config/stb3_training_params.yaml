@@ -5,5 +5,5 @@ training:
   buffer_size: 100000
   model_name: SAC
   
-  continue_training: False
-  model_path: /data/rl_data/training_env_no_object_2/models/SAC_190000.zip
+  continue_training: false
+  model_path: /data/catkin_ws/src/drl_navigation/models/training_env_no_object/SAC/SAC_200000
