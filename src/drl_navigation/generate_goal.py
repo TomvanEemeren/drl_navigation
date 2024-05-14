@@ -220,7 +220,7 @@ class GenerateRandomGoal:
 
         """
         pixel_x = int((x - self.origin[0]) / self.resolution)
-        pixel_y = self.height - int((y - self.origin[1]) / self.resolution)
+        pixel_y = self.height - int((y - self.origin[1]) / self.resolution) - 1
         size_x = int(size[0] / self.resolution)
         size_y = int(size[1] / self.resolution)
 
@@ -287,6 +287,25 @@ class GenerateRandomGoal:
         rotated_image = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR,
                                         borderMode=cv2.BORDER_CONSTANT, borderValue=220)
         return rotated_image
+    
+    def get_pixel_value(self, x, y):
+        """
+        Returns the pixel value at the specified coordinates.
+
+        Args:
+            x (int): x-coordinate of the pixel.
+            y (int): y-coordinate of the pixel.
+
+        Returns:
+            int: Pixel value.
+        """
+        pixel_x = int((x - self.origin[0]) / self.resolution)
+        pixel_y = self.height - int((y - self.origin[1]) / self.resolution) - 1
+        
+        if pixel_x < 0 or pixel_x >= self.width or pixel_y < 0 or pixel_y >= self.height:
+            return None
+        
+        return self.opencv_image[pixel_y, pixel_x]
 
     def create_figure(self, image, resolution, origin, width, height):
         plt.figure(figsize=(width * resolution, height * resolution))
@@ -319,13 +338,15 @@ class GenerateRandomGoal:
 if __name__ == '__main__':
     map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.yaml"
     map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.png"
-    start_time = time.time()
     random_goal = GenerateRandomGoal(map_yaml_path, map_pgm_path)
     start_x, start_y = random_goal.generate_random_coordinate(min_distance=0.4)
     goal_x, goal_y = random_goal.generate_random_coordinate(min_distance=0.4, 
                                                             invalid_coordinates=[(start_x, start_y)],
                                                             min_x=None)
+    start_time = time.time()
     image, width, height = random_goal.create_costmap(-1, -1, 0, size=(3, 3), visualise=True)
     difference = time.time() - start_time
+    pixel_value = random_goal.get_pixel_value(3.22, 0.6)
     print(f"Width: {width}, Height: {height}")
-    print(f"Time taken: {difference:.2f} seconds")
+    print(f"Pixel value: {pixel_value}")
+    print(f"Time taken: {difference:.4f} seconds")

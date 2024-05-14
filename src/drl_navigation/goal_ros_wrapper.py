@@ -2,7 +2,7 @@
 
 import rospy
 from cv_bridge import CvBridge
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Bool
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PointStamped
 from drl_navigation.generate_goal import GenerateRandomGoal
@@ -19,9 +19,10 @@ class RandomGoalROSWrapper:
 
         self.random_goal = GenerateRandomGoal(self.map_yaml_path, self.map_pgm_path)
         
-        self.goal_pub = rospy.Publisher("/random_goal", PointStamped, queue_size=1)
+        self.goal_pub = rospy.Publisher("/random_goal", PointStamped, queue_size=10)
         if self.use_semantics:
-            self.map_pub = rospy.Publisher("/semantic_costmap", Image, queue_size=1)
+            self.map_pub = rospy.Publisher("/semantic_costmap", Image, queue_size=10)
+            self.hazard_pub = rospy.Publisher("/hazard_detected", Bool, queue_size=10)
             self.br = CvBridge()
 
     def get_costmap(self, x, y, yaw):
@@ -32,6 +33,17 @@ class RandomGoalROSWrapper:
                 self.map_pub.publish(self.br.cv2_to_imgmsg(map_image))
         
         return map_image.astype('uint8'), width, height
+    
+    def hazard_detected(self, x, y):
+        pixel_value = self.random_goal.get_pixel_value(x, y)
+        hazard_msg = Bool()
+        if pixel_value == 150:
+            hazard_msg.data = True
+            self.hazard_pub.publish(hazard_msg)
+            return True
+        hazard_msg.data = True
+        self.hazard_pub.publish(hazard_msg)
+        return False
 
     def get_random_coordinates(self):
         random_coordinate = \

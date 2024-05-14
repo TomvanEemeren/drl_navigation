@@ -12,13 +12,15 @@ class RewardFunction:
         self.c_l = rospy.get_param('/husarion/c_linear')
         self.c_w = rospy.get_param('/husarion/c_angular')
         self.c_h = rospy.get_param('/husarion/c_heading')
+        self.c_m = rospy.get_param('/husarion/c_hazard')
+        self.use_semantics = rospy.get_param('/husarion/use_semantics')
 
         self.max_linear_speed = rospy.get_param('/husarion/max_linear_speed')
         self.w_thershold = rospy.get_param('/husarion/angular_threshold')
         self.d_thershold = rospy.get_param('/husarion/obstacle_threshold')
 
     def compute_step_reward(self, distance_difference, distance_to_obstacle, 
-                            linear_speed, angular_speed, heading):
+                            linear_speed, angular_speed, heading, hazard_detected):
         """
         Computes the reward for the current state.
 
@@ -38,10 +40,16 @@ class RewardFunction:
         self.linear_speed = linear_speed
         self.angular_speed = angular_speed
         self.heading = heading
+        self.hazard_detected = hazard_detected
 
-        reward = self.get_distance_reward() + self.get_velocity_reward() \
+        if self.use_semantics:
+            reward = self.get_distance_reward() + self.get_velocity_reward() \
                     + self.get_rotation_reward() + self.get_obstacle_reward() \
-                    + self.get_heading_reward() - 1
+                    + self.get_heading_reward() + self.get_hazard_reward() - 1
+        else:
+            reward = self.get_distance_reward() + self.get_velocity_reward() \
+                        + self.get_rotation_reward() + self.get_obstacle_reward() \
+                        + self.get_heading_reward() - 1
 
         return round(reward, 4)
 
@@ -111,3 +119,15 @@ class RewardFunction:
             float: heading reward
         """
         return -self.c_h * abs(self.heading)
+
+    def get_hazard_reward(self):
+        """
+        Reward for avoiding hazards.
+
+        Returns:
+            float: hazard reward
+        """
+        if self.hazard_detected:
+            return self.c_m
+        else:
+            return 

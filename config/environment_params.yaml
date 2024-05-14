@@ -37,6 +37,7 @@ husarion:
   c_linear: -50
   c_angular: -1
   c_heading: 1
+  c_hazard: -10
   angular_threshold: 0.8
   obstacle_threshold: 0.4
 

@@ -2,46 +2,111 @@
 
 import math
 import rospy
-from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Bool
+from cv_bridge import CvBridge
+from std_msgs.msg import Header
+from sensor_msgs.msg import Image
 from tf.transformations import euler_from_quaternion
+from geometry_msgs.msg import PoseStamped, PointStamped
+from drl_navigation.generate_goal import GenerateRandomGoal
 
-def normalize_angle(angle):
-    while angle > math.pi:
-        angle -= 2.0 * math.pi
-    while angle < -math.pi:
-        angle += 2.0 * math.pi
-    return angle
 
-def pose_callback(msg):
-    # Compute the heading to the x, y coordinate
-    target_x = 2.0  # Example x coordinate
-    target_y = -2.0  # Example y coordinate
+class TestNode:
+    def __init__(self):
+        self.start_x, self.start_y = (0.0, 0.0)
+        self.robot_x, self.robot_y = (0.0, 0.0)
+        self.target_x, self.target_y = (2.0,-2.0)
+        self.yaw = 0.0
+        self.map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.yaml"
+        self.map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.png"
 
-    robot_x = msg.pose.position.x  # Get the robot's x coordinate from the message
-    robot_y = msg.pose.position.y  # Get the robot's y coordinate from the message
+        self.random_goal = GenerateRandomGoal(self.map_yaml_path, self.map_pgm_path)
+        
+        self.rosbot_pose = rospy.Subscriber('/rosbot/pose', PoseStamped, self.pose_callback)
 
-    # Compute the difference in x and y coordinates
-    delta_x = target_x - robot_x
-    delta_y = target_y - robot_y
+        self.goal_pub = rospy.Publisher("/random_goal", PointStamped, queue_size=10)
+        self.map_pub = rospy.Publisher("/semantic_costmap", Image, queue_size=10)
+        self.hazard_pub = rospy.Publisher("/hazard_detected", Bool, queue_size=10)
+        self.br = CvBridge()
 
-    # Convert pose.orientation to euler angles
-    roll, pitch, yaw = euler_from_quaternion([msg.pose.orientation.x, 
-                                              msg.pose.orientation.y, 
-                                              msg.pose.orientation.z, 
-                                              msg.pose.orientation.w])
+    def get_costmap(self):
+        yaw = self.yaw * 180 / 3.14159265359
+        map_image, width, height = self.random_goal.create_costmap(self.robot_x, self.robot_y, yaw, 
+                                                                   size=(3, 3))
+        if map_image is not None:
+                self.map_pub.publish(self.br.cv2_to_imgmsg(map_image))
+        
+        return map_image.astype('uint8'), width, height
+    
+    def hazard_detected(self):
+        pixel_value = self.random_goal.get_pixel_value(self.robot_x, self.robot_y)
+        hazard_msg = Bool()
+        if pixel_value == 150:
+            hazard_msg.data = True
+            self.hazard_pub.publish(hazard_msg)
+            return True
+        hazard_msg.data = False
+        self.hazard_pub.publish(hazard_msg)
+        return False
 
-    # Compute the heading using arctan2
-    heading = math.atan2(delta_y, delta_x) - yaw
+    def get_random_coordinates(self):
+        random_coordinate = \
+            self.random_goal.generate_random_coordinate(min_distance=0.4, 
+                                                        invalid_coordinates=[(self.start_x, self.start_y)],
+                                                        min_x=self.min_goal_x)
+        
+        # Create Point message
+        point_msg = PointStamped()
+        point_msg.header = Header()
+        point_msg.header.stamp = rospy.Time.now()  # Current time
+        point_msg.header.frame_id = "map"
+        point_msg.point.x = random_coordinate[0]
+        point_msg.point.y = random_coordinate[1]
+        point_msg.point.z = 0.0
 
-    heading = abs(normalize_angle(heading))  # Normalize the heading
+        # Publish the message
+        self.goal_pub.publish(point_msg)
 
-    # Print the heading
-    rospy.loginfo("Heading: " + str(heading))
+        return random_coordinate
+
+    def normalize_angle(self, angle):
+        while angle > math.pi:
+            angle -= 2.0 * math.pi
+        while angle < -math.pi:
+            angle += 2.0 * math.pi
+        return angle
+
+    def pose_callback(self, msg):
+        self.robot_x = msg.pose.position.x
+        self.robot_y = msg.pose.position.y
+
+        # Convert pose.orientation to euler angles
+        _, _, self.yaw = euler_from_quaternion([msg.pose.orientation.x, 
+                                                msg.pose.orientation.y, 
+                                                msg.pose.orientation.z, 
+                                                msg.pose.orientation.w])
+
+    def get_heading(self):
+        # Compute the difference in x and y coordinates
+        delta_x = self.target_x - self.robot_x
+        delta_y = self.target_y - self.robot_y
+
+        # Compute the heading using arctan2
+        heading = math.atan2(delta_y, delta_x) - self.yaw
+
+        heading = abs(self.normalize_angle(heading))  # Normalize the heading
+
+        # Print the heading
+        rospy.loginfo("Heading: " + str(heading))
 
 if __name__ == '__main__':
     rospy.init_node('test_node')  # Initialize the ROS node
+    
+    test_node = TestNode()
 
-    # Create a subscriber to the /scan_filtered topic
-    rospy.Subscriber('/rosbot/pose', PoseStamped, pose_callback)
-
-    rospy.spin()  # Spin to keep the node from exiting
+    rate = rospy.Rate(10)
+    while not rospy.is_shutdown():
+        test_node.get_heading()
+        test_node.get_costmap()
+        test_node.hazard_detected()
+        rate.sleep()

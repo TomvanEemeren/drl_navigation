@@ -334,12 +334,18 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         
         rospy.logwarn("distance_difference=" + str(distance_difference))
 
+        if self.use_semantic_map:
+            hazard_detected = self.random_goal.hazard_detected(current_pos.x, current_pos.y)
+        else:
+            hazard_detected = False
+
         if not done:
             reward = self.reward_function.compute_step_reward(distance_difference=distance_difference,
                                                             distance_to_obstacle=min_dist_to_obstacle,
                                                             linear_speed=linear_speed,
                                                             angular_speed=angular_speed,
-                                                            heading=heading)
+                                                            heading=heading,
+                                                            hazard_detected=hazard_detected)
         else:
             reached_des_pos = self.check_reached_desired_position(current_pos,
                                                                   self.desired_position,
