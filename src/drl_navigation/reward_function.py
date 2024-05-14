@@ -130,4 +130,4 @@ class RewardFunction:
         if self.hazard_detected:
             return self.c_m
         else:
-            return 
+            return 0
