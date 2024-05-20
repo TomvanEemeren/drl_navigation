@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import rospy
 from cv_bridge import CvBridge
 from std_msgs.msg import Header, Bool
@@ -12,12 +13,26 @@ class RandomGoalROSWrapper:
         self.start_x = start_x
         self.start_y = start_y
 
-        self.map_yaml_path = rospy.get_param("/husarion/map_yaml_abspath", default=None)
-        self.map_pgm_path = rospy.get_param("/husarion/map_pgm_abspath", default=None)
+        self.maps_abspath = rospy.get_param("/husarion/maps_abspath", default=None)
         self.min_goal_x = rospy.get_param("/husarion/min_goal_x", default=None)
         self.use_semantics = rospy.get_param("/husarion/use_semantics", default=False)
 
-        self.random_goal = GenerateRandomGoal(self.map_yaml_path, self.map_pgm_path)
+        self.obstacle_map = rospy.get_param("/costmap/obstacle_map", default=None)
+        self.radius = rospy.get_param("/costmap/radius", default=None)
+
+        self.map_yaml_path = self.maps_abspath + self.obstacle_map + ".yaml"
+        self.obstacle_map_abspath = self.maps_abspath + self.obstacle_map
+
+        if os.path.exists(self.obstacle_map_abspath + ".png"):
+            self.obstacle_map_abspath += ".png"
+        elif os.path.exists(self.obstacle_map_abspath + ".pgm"):
+            self.obstacle_map_abspath += ".pgm"
+        else:
+            rospy.logerr("Obstacle map not found.")
+            return
+                
+        self.random_goal = GenerateRandomGoal(self.map_yaml_path, 
+                                              self.obstacle_map_abspath, self.radius)
         
         self.goal_pub = rospy.Publisher("/random_goal", PointStamped, queue_size=10)
         if self.use_semantics:

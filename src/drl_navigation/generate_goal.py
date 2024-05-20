@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import cv2
 import yaml
 import math
@@ -30,7 +31,7 @@ class GenerateRandomGoal:
         plot_map():
             Plots the map with occupied coordinates.
     """
-    def __init__(self, map_yaml_path, map_pgm_path, visualise=False):
+    def __init__(self, map_yaml_path, map_pgm_path, radius=None, visualise=False):
         self.map_yaml_path = map_yaml_path
         self.map_pgm_path = map_pgm_path
 
@@ -39,7 +40,8 @@ class GenerateRandomGoal:
         
         self.resolution = self.map_data['resolution']
         self.origin = self.map_data['origin']
-        
+        self.radius = radius / self.resolution if radius is not None else None
+
         self.occupied_coordinates, self.valid_coordinates = \
             self.get_filtered_coordinates()
 
@@ -186,16 +188,44 @@ class GenerateRandomGoal:
         """
         for contour in self.contour_info:
             x, y, w, h = contour['x'], contour['y'], contour['width'], contour['height']
-            if w <= h:
-                # Draw left box
-                points = np.array([[x - h, y], [x - 1, y], [x - 1, y + h - 1], 
-                                   [x - h, y + h - 1]], dtype=np.int32)
-                cv2.fillPoly(self.opencv_image, pts=[points], color=150)
-            elif w > h:
-                # Draw top box
-                points = np.array([[x, y - w], [x, y - 1], [x + w - 1, y - 1],
-                                   [x + w - 1, y - w]], dtype=np.int32)
-                cv2.fillPoly(self.opencv_image, pts=[points], color=150)
+            if self.radius is not None:
+                if w <= h:
+                    # Draw left box
+                    points = np.array([[x - self.radius, y], [x - 1, y], [x - 1, y + h - 1], 
+                                    [x - self.radius, y + h - 1]], dtype=np.int32)
+                    cv2.fillPoly(self.opencv_image, pts=[points], color=150)
+                    # Draw right box
+                    points = np.array([[x + w + self.radius, y], [x + w, y], [x + w, y + h - 1], 
+                                    [x + w + self.radius, y + h - 1]], dtype=np.int32)
+                    cv2.fillPoly(self.opencv_image, pts=[points], color=150)
+                elif w > h:
+                    # Draw top box
+                    points = np.array([[x, y - self.radius], [x, y - 1], [x + w - 1, y - 1],
+                                    [x + w - 1, y - self.radius]], dtype=np.int32)
+                    cv2.fillPoly(self.opencv_image, pts=[points], color=150)
+                    # Draw bottom box
+                    points = np.array([[x, y + h + self.radius], [x, y + h], [x + w - 1, y + h],
+                                    [x + w - 1, y + h + self.radius]], dtype=np.int32)
+                    cv2.fillPoly(self.opencv_image, pts=[points], color=150)
+            else:
+                if w <= h:
+                    # Draw left box
+                    points = np.array([[x - h, y], [x - 1, y], [x - 1, y + h - 1], 
+                                    [x - h, y + h - 1]], dtype=np.int32)
+                    cv2.fillPoly(self.opencv_image, pts=[points], color=150)
+                    # Draw right box
+                    points = np.array([[x + w + h, y], [x + w, y], [x + w, y + h - 1], 
+                                    [x + w + h, y + h - 1]], dtype=np.int32)
+                    cv2.fillPoly(self.opencv_image, pts=[points], color=150)
+                elif w > h:
+                    # Draw top box
+                    points = np.array([[x, y - w], [x, y - 1], [x + w - 1, y - 1],
+                                    [x + w - 1, y - w]], dtype=np.int32)
+                    cv2.fillPoly(self.opencv_image, pts=[points], color=150)
+                    # Draw bottom box
+                    points = np.array([[x, y + h + w], [x, y + h], [x + w - 1, y + h],
+                                    [x + w - 1, y + h + w]], dtype=np.int32)
+                    cv2.fillPoly(self.opencv_image, pts=[points], color=150)
 
         if visualise:
             self.create_figure(self.opencv_image, self.resolution, 
@@ -336,9 +366,9 @@ class GenerateRandomGoal:
         plt.show()
 
 if __name__ == '__main__':
-    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.yaml"
-    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.png"
-    random_goal = GenerateRandomGoal(map_yaml_path, map_pgm_path)
+    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/revit_one_object_2.yaml"
+    map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/revit_one_object_2.png"
+    random_goal = GenerateRandomGoal(map_yaml_path, map_pgm_path, radius=1.3)
     start_x, start_y = random_goal.generate_random_coordinate(min_distance=0.4)
     goal_x, goal_y = random_goal.generate_random_coordinate(min_distance=0.4, 
                                                             invalid_coordinates=[(start_x, start_y)],

@@ -14,19 +14,15 @@
     <!-- This version uses the openai_ros environments -->
     <rosparam command="load" file="$(find drl_navigation)/config/stb3_training_params.yaml" />
     <rosparam command="load" file="$(find drl_navigation)/config/environment_params.yaml" />
+    <rosparam command="load" file="$(find drl_navigation)/config/costmap_params.yaml" />
 
     <rosparam>
         husarion:
-            map_yaml_abspath: /catkin_ws/src/drl_navigation/maps/map.yaml
-            map_pgm_abspath: /catkin_ws/src/drl_navigation/maps/map.pgm
+            maps_abspath: /catkin_ws/src/drl_navigation/maps/
     </rosparam>
 
-    <rosparam param="husarion/map_yaml_abspath" subst_value="True">
-        $(find drl_navigation)/maps/$(arg env_name).yaml
-    </rosparam>
-
-    <rosparam param="husarion/map_pgm_abspath" subst_value="True">
-        $(find drl_navigation)/maps/$(arg env_name).pgm
+    <rosparam param="husarion/maps_abspath" subst_value="True">
+        $(find drl_navigation)/maps/
     </rosparam>
 
     <!-- Launch the training system -->

@@ -14,8 +14,8 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
         total_concat_size = 0
         for key, subspace in observation_space.spaces.items():
             if key == "costmap":
-                n_convW1 = ((subspace.shape[1] - 6) // 3 + 1)
-                n_convH1 = ((subspace.shape[2] - 6) // 3 + 1)
+                n_convW1 = ((subspace.shape[1] - 7) // 3 + 1)
+                n_convH1 = ((subspace.shape[2] - 7) // 3 + 1)
                 n_poolW1 = (n_convW1 - 3) // 3 + 1
                 n_poolH1 = (n_convH1 - 3) // 3 + 1
                 n_flatten = n_poolW1 * n_poolH1 * 6

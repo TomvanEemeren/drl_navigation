@@ -1,0 +1,3 @@
+costmap:
+  radius: 1.3
+  obstacle_map: revit_one_object_2

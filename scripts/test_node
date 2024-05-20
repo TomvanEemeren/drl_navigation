@@ -17,10 +17,10 @@ class TestNode:
         self.robot_x, self.robot_y = (0.0, 0.0)
         self.target_x, self.target_y = (2.0,-2.0)
         self.yaw = 0.0
-        self.map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.yaml"
-        self.map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/test_map.png"
+        self.map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/revit_one_object_2.yaml"
+        self.map_pgm_path = "/data/catkin_ws/src/drl_navigation/maps/revit_one_object_2.png"
 
-        self.random_goal = GenerateRandomGoal(self.map_yaml_path, self.map_pgm_path)
+        self.random_goal = GenerateRandomGoal(self.map_yaml_path, self.map_pgm_path, radius=1.3)
         
         self.rosbot_pose = rospy.Subscriber('/rosbot/pose', PoseStamped, self.pose_callback)
 
