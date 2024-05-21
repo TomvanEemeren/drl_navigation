@@ -32,7 +32,7 @@
     <param name="odom_alpha4" value="0.5"/>
   </node>
 
-  <arg name="map_file" default="$(find drl_navigation)/maps/$(arg env_name).yaml"/>
+  <arg name="map_file" default="$(find drl_navigation)/maps/$(arg env_name)/$(arg env_name).yaml"/>
   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" respawn="true" />
   
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find drl_navigation)/rviz/stb3_config.rviz" />

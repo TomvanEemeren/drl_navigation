@@ -18,11 +18,16 @@
 
     <rosparam>
         husarion:
+            map_yaml_abspath: /catkin_ws/src/drl_navigation/maps/map.yaml
             maps_abspath: /catkin_ws/src/drl_navigation/maps/
     </rosparam>
 
+    <rosparam param="husarion/map_yaml_abspath" subst_value="True">
+        $(find drl_navigation)/maps/$(arg env_name)/$(arg env_name).yaml
+    </rosparam>
+
     <rosparam param="husarion/maps_abspath" subst_value="True">
-        $(find drl_navigation)/maps/
+        $(find drl_navigation)/maps/$(arg env_name)/
     </rosparam>
 
     <!-- Launch the training system -->

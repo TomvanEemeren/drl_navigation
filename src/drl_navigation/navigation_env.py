@@ -179,6 +179,8 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         self.linear_speed = self.init_linear_forward_speed
         self.angular_speed = self.init_linear_turn_speed
 
+        self.random_goal.update_random_map()
+
         new_position = Point()
         new_position.x, new_position.y = \
             self.random_goal.get_random_coordinates()
