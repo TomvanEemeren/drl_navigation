@@ -456,9 +456,9 @@ class GenerateRandomGoal:
         plt.show()
 
 if __name__ == '__main__':
-    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/revit_one_object/revit_one_object.yaml"
-    map_pgm_path = ["revit_one_object_2","revit_one_object_3","revit_one_object_4","revit_one_object_5"]
-    maps_abspath = "/data/catkin_ws/src/drl_navigation/maps/revit_one_object/"
+    map_yaml_path = "/data/catkin_ws/src/drl_navigation/maps/revit_no_object/revit_no_object.yaml"
+    map_pgm_path = ["revit_no_object_9","revit_no_object_8"]
+    maps_abspath = "/data/catkin_ws/src/drl_navigation/maps/revit_no_object/"
     random_goal = GenerateRandomGoal(map_yaml_path, map_pgm_path, maps_abspath, radius=1.2, visualise=False)
     start_x, start_y = random_goal.generate_random_coordinate(min_distance=0.4)
     goal_x, goal_y = random_goal.generate_random_coordinate(min_distance=0.4, 

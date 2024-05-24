@@ -1,0 +1,27 @@
+<?xml version="1.0" ?>
+<sdf version="1.7">
+
+    <model name="revit_c_shape">
+        <pose>0 0 0 0 0 0</pose>
+        <static>true</static>
+        <link name="link">
+            <collision name="collision">
+                <geometry>
+                    <mesh>
+                        <uri>model://revit_c_shape/meshes/revit_c_shape.stl</uri>
+                        <scale>0.001 0.001 0.001</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+
+            <visual name='visual'>
+                <geometry>
+                    <mesh>
+                        <uri>model://revit_c_shape/meshes/revit_c_shape.stl</uri>
+                        <scale>0.001 0.001 0.001</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+    </model>
+</sdf>
