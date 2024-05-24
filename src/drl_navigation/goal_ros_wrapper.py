@@ -13,6 +13,9 @@ class RandomGoalROSWrapper:
         self.start_y = start_y
 
         self.min_goal_x = rospy.get_param("/husarion/min_goal_x", default=None)
+        self.max_goal_x = rospy.get_param("/husarion/max_goal_x", default=None)
+        self.min_goal_y = rospy.get_param("/husarion/min_goal_y", default=None)
+        self.max_goal_y = rospy.get_param("/husarion/max_goal_y", default=None)
         self.use_semantics = rospy.get_param("/husarion/use_semantics", default=False)
 
         self.map_yaml_abspath = rospy.get_param("/husarion/map_yaml_abspath", default=None)
@@ -56,7 +59,8 @@ class RandomGoalROSWrapper:
         random_coordinate = \
             self.random_goal.generate_random_coordinate(min_distance=0.4, 
                                                         invalid_coordinates=[(self.start_x, self.start_y)],
-                                                        min_x=self.min_goal_x)
+                                                        min_x=self.min_goal_x, max_x=self.max_goal_x,
+                                                        min_y=self.min_goal_y, max_y=self.max_goal_y)
         
         # Create Point message
         point_msg = PointStamped()

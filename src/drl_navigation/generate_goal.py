@@ -185,7 +185,8 @@ class GenerateRandomGoal:
 
         return occupied_coordinates, valid_coordinates
     
-    def generate_random_coordinate(self, min_distance=0.3, invalid_coordinates=[], min_x=None, min_y=None):
+    def generate_random_coordinate(self, min_distance=0.3, invalid_coordinates=[], 
+                                   min_x=None, max_x=None, min_y=None, max_y=None):
         """
         Generates a random goal coordinate that is far enough from occupied spaces.
 
@@ -207,9 +208,9 @@ class GenerateRandomGoal:
             # Check if the goal is far enough from occupied spaces and invalid coordinates
             if all(math.sqrt((x - random_x)**2 + (y - random_y)**2) > min_distance 
                    for x, y in occupied_coordinates + invalid_coordinates):
-                if min_x is not None and random_x < min_x:
+                if min_x is not None and random_x < min_x or max_x is not None and random_x > max_x:
                     continue
-                if min_y is not None and random_y < min_y:
+                if min_y is not None and random_y < min_y or max_y is not None and random_y > max_y:
                     continue
                 return random_x, random_y
 
@@ -348,7 +349,7 @@ class GenerateRandomGoal:
 
         translated_image, new_center = self.translate_image(opencv_image, pixel_x, pixel_y)
         
-        min_x = max(0, new_center[0] - size_x // 2)
+        min_x = max(0, new_center[0] - 1)
         max_x = min(translated_image.shape[0], (new_center[0] + size_x // 2) + 1)
         min_y = max(0, new_center[1] - size_y // 2)
         max_y = min(translated_image.shape[1], (new_center[1] + size_y // 2) + 1)
@@ -462,7 +463,7 @@ if __name__ == '__main__':
     start_x, start_y = random_goal.generate_random_coordinate(min_distance=0.4)
     goal_x, goal_y = random_goal.generate_random_coordinate(min_distance=0.4, 
                                                             invalid_coordinates=[(start_x, start_y)],
-                                                            min_x=None)
+                                                            min_x=None, max_x=None, min_y=None, max_y=None)
     start_time = time.time()
     image, width, height = random_goal.create_costmap(0, 0, 0, size=(3, 3), visualise=True)
     difference = time.time() - start_time
