@@ -23,10 +23,10 @@ husarion:
 
   use_semantics: true
   
-  # min_goal_x: 3
-  # max_goal_x: 5.0
-  # min_goal_y: -1.5
-  # max_goal_y: -1.0
+  # min_goal_x: 3.0
+  # max_goal_x: -0.5
+  # min_goal_y: 2.5
+  # max_goal_y: 0.0
 
   precision_epsilon: 0.2 # How close we need to be to the desired point to consider it reached
   move_base_precision: 0.1  # We allow this difference between the asked linear speed and the real one. 

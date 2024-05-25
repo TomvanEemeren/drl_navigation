@@ -1,13 +1,13 @@
 costmap:
   radius: 1.2
   obstacle_maps: 
-    - revit_no_object_1
-    - revit_no_object_2
-    - revit_no_object_3
-    - revit_no_object_4
-    - revit_no_object_5
-    - revit_no_object_6
-    - revit_no_object_7
-    - revit_no_object_8
-    - revit_no_object_9
-    - revit_no_object_10
+    - revit_one_object_1
+    - revit_one_object_2
+    - revit_one_object_3
+    - revit_one_object_4
+    - revit_one_object_5
+    - revit_one_object_6
+    - revit_one_object_7
+    - revit_one_object_8
+    - revit_one_object_9
+    - revit_one_object_10
