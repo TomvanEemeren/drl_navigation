@@ -23,9 +23,9 @@ husarion:
 
   use_semantics: true
   
-  # min_goal_x: 3.0
+  # min_goal_x: 2.0
   # max_goal_x: -0.5
-  # min_goal_y: 2.5
+  # min_goal_y: 0.5
   # max_goal_y: 0.0
 
   precision_epsilon: 0.2 # How close we need to be to the desired point to consider it reached
