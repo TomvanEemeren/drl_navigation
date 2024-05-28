@@ -1,4 +1,4 @@
 costmap:
   radius: 1.2
   obstacle_maps: 
-    - revit_one_object_1
+    - revit_one_object_3

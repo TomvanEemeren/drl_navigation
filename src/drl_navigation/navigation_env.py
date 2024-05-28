@@ -63,6 +63,10 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
 
         self.use_semantic_map = rospy.get_param("/husarion/use_semantics")
 
+        self.prev_hazard = False
+        self.start_time = rospy.Time.now()
+        self.end_time = rospy.Time.now()
+
         # Get a random goal
         self.start_x, self.start_y, self.start_yaw = (0.0, 0.0, 0.0)
         self.random_goal = RandomGoalROSWrapper(self.start_x, self.start_y)
@@ -336,8 +340,17 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         
         rospy.logwarn("distance_difference=" + str(distance_difference))
 
+        hazard = self.random_goal.hazard_detected(current_pos.x, current_pos.y)
+
+        if hazard and not self.prev_hazard:
+            self.start_time = rospy.Time.now()
+        elif not hazard and self.prev_hazard:
+            self.end_time = rospy.Time.now()
+            hazard_time = self.end_time - self.start_time
+            self.result.hazard_time += hazard_time
+
         if self.use_semantic_map:
-            hazard_detected = self.random_goal.hazard_detected(current_pos.x, current_pos.y)
+            hazard_detected = hazard
         else:
             hazard_detected = False
 
@@ -373,6 +386,7 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
                     "SOMETHING WENT WRONG ; DONE, reward=" + str(reward))
         
         self.previous_distance_from_des_point = distance_from_des_point
+        self.prev_hazard = hazard
         
         rospy.logwarn("reward=" + str(reward))
         self.cumulated_reward += reward
