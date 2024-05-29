@@ -174,7 +174,9 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
         """
         #self.set_initial_pose([self.start_x, self.start_y, self.start_yaw])
         self.reset_amcl_initial_pose([self.start_x, self.start_y, self.start_yaw])
-
+        
+        self.prev_hazard = False
+        
         # For Info Purposes
         self.cumulated_reward = 0.0
 
@@ -365,6 +367,11 @@ class RosbotNavigationEnv(rosbot_env.RosbotEnv):
             reached_des_pos = self.check_reached_desired_position(current_pos,
                                                                   self.desired_position,
                                                                   self.precision_epsilon)
+
+            if hazard and self.prev_hazard:
+                self.end_time = rospy.Time.now()
+                hazard_time = self.end_time - self.start_time
+                self.result.hazard_time += hazard_time
 
             if reached_des_pos:
                 reward = self.reward_function.get_termination_reward(goal_reached=True)
