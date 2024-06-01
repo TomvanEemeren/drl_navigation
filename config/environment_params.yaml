@@ -21,10 +21,10 @@ husarion:
     y_max: 5.0
     y_min: -5.0
 
-  use_semantics: false
+  use_semantics: true
   
-  # min_goal_x: 3.0
-  # max_goal_x: 3.1
+  # min_goal_x: 2.5
+  # max_goal_x: 2.6
   # min_goal_y: 1.0
   # max_goal_y: 1.1
 
